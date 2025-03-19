@@ -1,0 +1,35 @@
+---
+import { type CollectionEntry } from "astro:content";
+import Calendar from "../assets/icons/calendar.svg";
+
+interface Props {
+  post: CollectionEntry<"blog">;
+}
+
+const { post } = Astro.props;
+
+let timeStr = `Posted ${post.data.createdAt.toDateString()}`;
+let time = post.data.createdAt;
+if (post.data.updatedAt) {
+  timeStr = `Updated ${post.data.updatedAt.toDateString()}`;
+  time = post.data.updatedAt;
+}
+---
+
+<article class="relative isolate">
+  <h3
+    class="text-primary text-lg underline-offset-4 hover:underline hover:decoration-wavy"
+  >
+    <a href={`/blog/${post.id}`}>
+      {post.data.title}
+      <span class="absolute inset-0"></span>
+    </a>
+  </h3>
+  <div class="flex items-center gap-2">
+    <Calendar size={16} />
+    <time datetime={time.toISOString()} class="text-sm text-neutral-400 italic"
+      >{timeStr}</time
+    >
+  </div>
+  <p>{post.data.description}</p>
+</article>

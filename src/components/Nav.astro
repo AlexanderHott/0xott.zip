@@ -1,0 +1,55 @@
+---
+import Hr from "../components/Hr.astro";
+
+import Logo from "../assets/logo.svg";
+import Search from "../assets/icons/search.svg";
+import GitHub from "../assets/icons/github.svg";
+
+const currentPath = Astro.url.pathname;
+
+const ROUTES = {
+  home: "/",
+  blog: "/blog",
+  projects: "/projects",
+  me: "/me",
+};
+---
+
+<nav class="flex items-center justify-between">
+  <div class="flex items-center gap-4">
+    <a href="/" class="flex items-center gap-2">
+      <Logo width={64} height={64} />
+      <h1 class="text-2xl">0×ott</h1>
+    </a>
+  </div>
+  <ul class="flex flex-row gap-4">
+    {
+      Object.entries(ROUTES).map(([name, route]) => (
+        <li>
+          <a
+            href={route}
+            class={
+              currentPath === route ||
+              (currentPath.startsWith(route) && route !== "/")
+                ? "decoration-primary hover:text-primary underline decoration-wavy underline-offset-4"
+                : "hover:text-primary"
+            }
+          >
+            {name}
+          </a>
+        </li>
+      ))
+    }
+    <li>
+      <a href="/search">
+        <Search />
+      </a>
+    </li>
+    <li>
+      <a href="https://github.com/AlexanderHOtt">
+        <GitHub />
+      </a>
+    </li>
+  </ul>
+</nav>
+<Hr />

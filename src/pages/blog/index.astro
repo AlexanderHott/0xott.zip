@@ -1,0 +1,25 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import PostPreview from "../../components/PostPreview.astro";
+
+import { getCollection } from "astro:content";
+
+const nonDraftPosts = await getCollection(
+  "blog",
+  ({ data }) => data.draft !== true,
+);
+---
+
+<Layout>
+  <h1>posts</h1>
+
+  <ul class="flex flex-col gap-2">
+    {
+      nonDraftPosts.map((post) => (
+        <li>
+          <PostPreview {post} />
+        </li>
+      ))
+    }
+  </ul>
+</Layout>

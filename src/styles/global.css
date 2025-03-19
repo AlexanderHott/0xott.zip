@@ -1,0 +1,45 @@
+@import "tailwindcss";
+@plugin '@tailwindcss/typography';
+
+@font-face {
+  font-family: "GeistMono";
+  src: url("/fonts/GeistMono.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme static {
+  --font-mono: "GeistMono", monospace;
+  --color-primary: var(--color-green-500);
+  --color-background: var(--color-neutral-800);
+}
+
+@layer base {
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    @apply selection:bg-primary/70 selection:text-neutral-700;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-3;
+  }
+
+  /* Track */
+  ::-webkit-scrollbar-track {
+    @apply bg-neutral-700;
+  }
+
+  /* Handle */
+  ::-webkit-scrollbar-thumb {
+    @apply bg-neutral-500;
+  }
+
+  /* Handle on hover */
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary;
+  }
+}
