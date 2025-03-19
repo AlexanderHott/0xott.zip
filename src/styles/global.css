@@ -24,6 +24,10 @@
     @apply selection:bg-primary/70 selection:text-neutral-700;
   }
 
+  p {
+    @apply text-pretty
+  }
+
   ::-webkit-scrollbar {
     @apply w-3;
   }

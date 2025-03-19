@@ -4,7 +4,7 @@ title: How to Work on a Personal Project
 tags:
   - coding
   - meta
-description:
+description: ""
 ---
 
 If you read the title of this post and are saying to yourself, _I already know
