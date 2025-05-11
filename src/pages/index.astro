@@ -2,6 +2,23 @@
 import Layout from "../layouts/Layout.astro";
 import Hr from "../components/Hr.astro";
 import Rss from "../assets/icons/rss.svg";
+import { getCollection } from "astro:content";
+import PostPreview from "../components/PostPreview.astro";
+import ProjectPreview from "../components/ProjectPreview.astro";
+
+const posts = await getCollection("blog");
+const postsSorted = posts.toSorted(
+  (a, b) => b.data.createdAt.getTime() - a.data.createdAt.getTime(),
+);
+
+const projects = await getCollection("project");
+const projectsSorted = projects.toSorted(
+  (a, b) => b.data.createdAt.getTime() - a.data.createdAt.getTime(),
+);
+
+const postsFeatured = postsSorted.filter((post) => post.data.featured);
+const projectsFeatured = projectsSorted.filter((proj) => proj.data.featured);
+const featured = [...postsFeatured, ...projectsFeatured];
 ---
 
 <Layout>
@@ -31,12 +48,26 @@ import Rss from "../assets/icons/rss.svg";
 
       <section>
         <h2 class="text-2xl font-bold">Featured</h2>
+        {
+          featured
+            .slice(0, 3)
+            .map((item) =>
+              item.collection === "blog" ? (
+                <PostPreview post={item} />
+              ) : (
+                <ProjectPreview project={item} />
+              ),
+            )
+        }
       </section>
       <section>
         <h2 class="text-2xl font-bold">Projects</h2>
+        {projectsSorted.slice(0, 3).map((post) => <ProjectPreview project={post} />)}
+        </ul>
       </section>
       <section>
         <h2 class="text-2xl font-bold">Posts</h2>
+        {postsSorted.slice(0, 3).map((post) => <PostPreview post={post} />)}
       </section>
     </section>
 

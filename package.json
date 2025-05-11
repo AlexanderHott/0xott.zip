@@ -10,15 +10,19 @@
     "format": "prettier . --write"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.0.9",
-    "astro": "^5.4.1",
+    "@astrojs/mdx": "4.2.6",
+    "@tailwindcss/vite": "^4.1.4",
+    "astro": "5.7.12",
+    "katex": "^0.16.22",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0",
     "tailwind": "^4.0.0",
-    "tailwindcss": "^4.0.9"
+    "tailwindcss": "^4.1.4"
   },
   "devDependencies": {
     "@fsouza/prettierd": "^0.26.1",
     "@tailwindcss/typography": "^0.5.16",
-    "prettier": "^3.5.2",
+    "prettier": "^3.5.3",
     "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-tailwindcss": "^0.6.11"
   }

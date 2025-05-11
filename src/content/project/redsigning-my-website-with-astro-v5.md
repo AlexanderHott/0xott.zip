@@ -15,9 +15,3 @@ draft: true
    1. https://github.com/chrismwilliams/astro-theme-cactus
 
 1. porting old content is easy
-
-## TODO
-
-- [ ] main page
-- [ ] search
-- [ ] write some words!

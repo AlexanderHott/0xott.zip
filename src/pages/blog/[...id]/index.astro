@@ -1,7 +1,8 @@
 ---
 import type { GetStaticPaths } from "astro";
 import { getCollection, render, getEntry } from "astro:content";
-import Layout from "../../../layouts/Layout.astro";
+import Layout from "@/layouts/Layout.astro";
+import LeftChevron from "@/assets/icons/chevron-left.svg";
 
 export const getStaticPaths = (async () => {
   const posts = await getCollection("blog");
@@ -15,8 +16,17 @@ const { id } = Astro.params;
 
 const post = await getEntry("blog", id)!;
 
+console.log({ post, id });
+
 const { title, description, canonicalURL, createdAt, updatedAt, tags } =
   post.data;
+
+let timeStr;
+if (updatedAt) {
+  timeStr = `Updated: ${updatedAt.toLocaleDateString()}`;
+} else {
+  timeStr = `Published: ${createdAt.toLocaleDateString()}`;
+}
 
 const { Content } = await render(post);
 
@@ -26,30 +36,33 @@ function slugifyStr(text: string) {
 ---
 
 <Layout>
-  <div class="mx-auto flex w-full max-w-3xl justify-start px-2">
-    <button
-      class="focus-outline mt-8 mb-2 flex hover:opacity-75"
-      onclick="(() => (history.length === 1) ? window.location = '/' : history.back())()"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg"
-        ><path
-          d="M13.293 6.293 7.586 12l5.707 5.707 1.414-1.414L10.414 12l4.293-4.293z"
-        ></path>
-      </svg><span>Go back</span>
-    </button>
-  </div>
-  <main id="main-content">
-    <h1 transition:name={slugifyStr(title)} class="post-title inline-block">
-      {title}
-    </h1>
+  <main id="main">
     <article
       id="article"
       class="prose dark:prose-invert mx-auto mt-8 max-w-3xl"
     >
+      <div>
+        <button
+          class="flex cursor-pointer items-center gap-2"
+          onclick="(() => (history.length === 1) ? window.location = '/' : history.back())()"
+        >
+          <LeftChevron />
+          <span>Go back</span>
+        </button>
+        <h1 transition:name={slugifyStr(title)} class="post-title inline-block">
+          {title}
+        </h1>
+        <time
+          class="text-sm text-gray-500"
+          datetime={updatedAt?.toISOString() ?? createdAt.toISOString()}
+        >
+          {timeStr}
+        </time>
+      </div>
       <Content />
     </article>
 
-    <ul class="my-8">
+    <!-- <ul class="my-8">
       {/* {tags.map((tag) => <Tag tag={slugifyStr(tag)} tagName={tag} />)} */}
     </ul>
 
@@ -71,7 +84,7 @@ function slugifyStr(text: string) {
       {/* <ShareLinks /> */}
     </div>
 
-    <hr class="my-6 border-dashed" />
+    <hr class="my-6 border-dashed" /> -->
 
     <!-- Previous/Next Post Buttons -->
     {/* <div class="grid grid-cols-1 gap-6 sm:grid-cols-2"> */}
@@ -146,7 +159,7 @@ function slugifyStr(text: string) {
   {/* <Footer /> */}
 </Layout>
 
-<script is:inline data-astro-rerun>
+<!-- <script is:inline data-astro-rerun>
   /** Create a progress indicator
    *  at the top */
   function createProgressBar() {
@@ -266,4 +279,4 @@ function slugifyStr(text: string) {
   document.addEventListener("astro:after-swap", () =>
     window.scrollTo({ left: 0, top: 0, behavior: "instant" }),
   );
-</script>
+</script> -->

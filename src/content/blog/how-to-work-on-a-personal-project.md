@@ -18,6 +18,6 @@ At the beginning, this is the hardest part. If you have hobbies outside of
 programming: gaming, music, sports, etc..., then you can try making a project
 relating to those.
 
-- learn how to host a minecraft or csgo server
+- learn how to host a Minecraft or CS:GO server
 - write a music visualizer
 - make a sports game predictor

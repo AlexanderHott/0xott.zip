@@ -94,15 +94,18 @@ The Gaussian integral:
 $$ \int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi} $$
 ```
 
+$$ \int\_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi} $$
+
+$$
+\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
+$$
+
 The definition of the Riemann zeta function:
 
-```bash
-$$ \zeta(s) = \sum_{n=1}^{\infty} \frac{1}{n^s} $$
-```
+$$ \zeta(s) = \sum\_{n=1}^{\infty} \frac{1}{n^s} $$
 
 Maxwell's equations in differential form:
 
-```bash
 $$
 \begin{aligned}
 \nabla \cdot \mathbf{E} &= \frac{\rho}{\varepsilon_0} \\
@@ -111,7 +114,6 @@ $$
 \nabla \times \mathbf{B} &= \mu_0\left(\mathbf{J} + \varepsilon_0 \frac{\partial \mathbf{E}}{\partial t}\right)
 \end{aligned}
 $$
-```
 
 ## Using Mathematical Symbols
 

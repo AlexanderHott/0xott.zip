@@ -3,16 +3,16 @@ import { type CollectionEntry } from "astro:content";
 import Calendar from "../assets/icons/calendar.svg";
 
 interface Props {
-  post: CollectionEntry<"blog">;
+  project: CollectionEntry<"project">;
 }
 
-const { post } = Astro.props;
+const { project } = Astro.props;
 
-let timeStr = `Posted ${post.data.createdAt.toDateString()}`;
-let time = post.data.createdAt;
-if (post.data.updatedAt) {
-  timeStr = `Updated ${post.data.updatedAt.toDateString()}`;
-  time = post.data.updatedAt;
+let timeStr = `Posted ${project.data.createdAt.toDateString()}`;
+let time = project.data.createdAt;
+if (project.data.updatedAt) {
+  timeStr = `Updated ${project.data.updatedAt.toDateString()}`;
+  time = project.data.updatedAt;
 }
 ---
 
@@ -21,8 +21,8 @@ if (post.data.updatedAt) {
     <h3
       class="text-primary text-lg underline-offset-4 hover:underline hover:decoration-wavy"
     >
-      <a href={`/blog/${post.id}`} class="">
-        {post.data.title}
+      <a href={`/blog/${project.id}`} class="">
+        {project.data.title}
         <span class="absolute inset-0"></span>
       </a>
     </h3>
@@ -33,11 +33,11 @@ if (post.data.updatedAt) {
         class="text-sm text-neutral-400 italic">{timeStr}</time
       >
     </div>
-    <p>{post.data.description}</p>
+    <p>{project.data.description}</p>
   </div>
   <ul class="flex gap-2">
     {
-      post.data.tags.map((tag) => (
+      project.data.tags.map((tag) => (
         <a
           class="hover:text-primary text-sm text-neutral-400 underline-offset-4 hover:underline hover:decoration-wavy"
           href="#"

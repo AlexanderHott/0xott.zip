@@ -21,12 +21,16 @@
   }
 
   body {
-    @apply selection:bg-primary/70 selection:text-neutral-700;
+    @apply selection:bg-primary selection:text-neutral-700;
   }
 
   p {
-    @apply text-pretty
+    @apply text-pretty;
   }
+
+  /**
+   * Scroll Bar 
+   */
 
   ::-webkit-scrollbar {
     @apply w-3;

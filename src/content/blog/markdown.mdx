@@ -1,0 +1,192 @@
+---
+createdAt: 2025-04-19T19:37:30.157Z
+title: "Markdown: a simple markup language"
+tags:
+  - meta
+description: ""
+---
+
+import Logo from "../../assets/logo.svg";
+
+- content hierarchy
+- "hacky" ways of adding hierarchy
+- markdown
+
+In [Refactoring UI](https://www.refactoringui.com/), one of the greatest design
+resources for developers I've ever read, the authors make a very important point
+about content:
+
+> Hierarchy is Everything.
+>
+> Visual hierarchy refers to how important the elements in an interface appear
+> in relation to one another.
+>
+> -- Refactoring UI, 35-36
+
+Any piece of well made textual information has hierarchy. News stories have a
+headline and the rest of the article. Textbooks have chapter titles, section
+titles, asides, and the main body text. If all text is the same size, reading it
+becomes a lot more difficult.
+
+For example
+
+<div class="not-prose flex w-full items-center justify-center">
+  <div class="flex basis-sm gap-4 rounded-lg bg-neutral-700 p-4">
+    <div class="flex max-h-min rounded-full bg-neutral-950 p-2">
+      <Logo width={48} height={48} />
+    </div>
+    <div>
+      <p>Name: Alex Ott</p>
+      <p>Job Title: Developer</p>
+      <p>Email: dev@example.com</p>
+      <p>Phone: (800) 123-4567</p>
+    </div>
+  </div>
+</div>
+
+_vs_
+
+<div class="not-prose flex w-full items-center justify-center">
+  <div class="flex basis-sm items-center gap-4 rounded-lg bg-neutral-700 p-4">
+    <div class="flex max-h-min rounded-full bg-neutral-950 p-4">
+      <Logo width={72} height={72} />
+    </div>
+    <div class="flex flex-col gap-1">
+      <p class="text-2xl">Alex Ott</p>
+      <p class="text-lg text-green-600">Developer</p>
+      <p class="text-sm text-neutral-400">dev@example.com</p>
+      <p class="text-sm text-neutral-400">(800) 123-4567</p>
+    </div>
+  </div>
+</div>
+
+or
+
+<div class="not-prose rounded-lg bg-neutral-900 p-4">
+  <p class="whitespace-pre">
+    {(() => {
+    return `How to Make Pancakes
+
+Ingredients
+
+- 1 cup flour
+- 2 eggs
+- 1 cup milk
+- 2 tbsp sugar
+- 2 tsp baking powder
+- 1/2 tsp salt
+- Butter for cooking
+
+Instructions
+
+1. Mix Dry Ingredients:
+   1. Combine flour, sugar, baking powder, and salt in a bowl.
+2. Add Wet Ingredients:
+   1. Whisk in eggs and milk until smooth.
+3. Cook the Pancakes
+   1. Heat a non-stick pan over medium heat.
+   2. Melt a little butter in the pan.
+   3. Pour in 1/4 cup of batter per pancake.
+   4. Cook until bubbles form, then flip.
+   5. Cook until golden on the other side.
+
+Serving Suggestions
+
+Top with:
+
+- Maple syrup
+- Fresh fruit
+- Whipped cream`; })()}
+  </p>
+
+</div>
+
+_vs_
+
+<div class="rounded-lg bg-neutral-900 p-4">
+  <h1>How to Make Pancakes</h1>
+  <h2>Ingredients</h2>
+  <ul>
+    <li>1 cup flour</li>
+    <li>2 eggs</li>
+    <li>1 cup milk</li>
+    <li>2 tbsp sugar</li>
+    <li>2 tsp baking powder</li>
+    <li>1/2 tsp salt</li>
+    <li>Butter for cooking</li>
+  </ul>
+  <h2>Instructions</h2>
+  <ol>
+    <li>
+      Mix Dry Ingredients:
+      <ul>
+        <li>Combine flour, sugar, baking powder, and salt in a bowl.</li>
+      </ul>
+    </li>
+    <li>
+      Add Wet Ingredients:
+      <ul>
+        <li>Whisk in eggs and milk until smooth.</li>
+      </ul>
+    </li>
+    <li>
+      Cook the Pancakes:
+      <ul>
+        <li>Heat a non-stick pan over medium heat.</li>
+        <li>Melt a little butter in the pan.</li>
+        <li>Pour in 1/4 cup of batter per pancake.</li>
+        <li>Cook until bubbles form, then flip.</li>
+        <li>Cook until golden on the other side.</li>
+      </ul>
+    </li>
+  </ol>
+  <h2>Serving Suggestions</h2>
+  <p>Top with:</p>
+  <ul>
+    <li>Maple syrup</li>
+    <li>Fresh fruit</li>
+    <li>Whipped cream</li>
+  </ul>
+</div>
+
+The great thing about the second example is that markdown can transform the
+first into the second with just a few extra characters.
+
+```diff
+-How to Make Pancakes
++# How to Make Pancakes
+
+-Ingredients
++## Ingredients
+
+ - 1 cup flour
+ - 2 eggs
+ - 1 cup milk
+ - 2 tbsp sugar
+ - 2 tsp baking powder
+ - 1/2 tsp salt
+ - Butter for cooking
+
+-Instructions
++## Instructions
+
+1. Mix Dry Ingredients:
+   1. Combine flour, sugar, baking powder, and salt in a bowl.
+2. Add Wet Ingredients:
+   1. Whisk in eggs and milk until smooth.
+3. Cook the Pancakes
+   1. Heat a non-stick pan over medium heat.
+   2. Melt a little butter in the pan.
+   3. Pour in 1/4 cup of batter per pancake.
+   4. Cook until bubbles form, then flip.
+   5. Cook until golden on the other side.
+
+-Serving Suggestions
++## Serving Suggestions
+
+Top with:
+
+ - Maple syrup
+ - Fresh fruit
+ - Whipped cream
+```
