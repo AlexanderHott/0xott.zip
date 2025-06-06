@@ -5,13 +5,20 @@ import Rss from "../assets/icons/rss.svg";
 import { getCollection } from "astro:content";
 import PostPreview from "../components/PostPreview.astro";
 import ProjectPreview from "../components/ProjectPreview.astro";
+import Migration from "@/components/Migration.astro";
 
-const posts = await getCollection("blog");
+const posts = await getCollection(
+  "blog",
+  (entry) => entry.data.draft === false,
+);
 const postsSorted = posts.toSorted(
   (a, b) => b.data.createdAt.getTime() - a.data.createdAt.getTime(),
 );
 
-const projects = await getCollection("project");
+const projects = await getCollection(
+  "project",
+  (entry) => entry.data.draft === false,
+);
 const projectsSorted = projects.toSorted(
   (a, b) => b.data.createdAt.getTime() - a.data.createdAt.getTime(),
 );
@@ -40,35 +47,41 @@ const featured = [...postsFeatured, ...projectsFeatured];
       <p>Hey, 🌊</p>
       <p>
         I'm an undergraduate at Brandeis University majoring in Computer Science
-        and Applied Math. I plan on getting a PhD in something around systems,
-        data systems, or distirbuted systems.
+        and Applied Math. I plan on getting a PhD in something with systems,
+        data systems, distirbuted systems, or security.
       </p>
 
       <Hr />
 
-      <section>
-        <h2 class="text-2xl font-bold">Featured</h2>
-        {
-          featured
-            .slice(0, 3)
-            .map((item) =>
-              item.collection === "blog" ? (
-                <PostPreview post={item} />
-              ) : (
-                <ProjectPreview project={item} />
-              ),
-            )
-        }
-      </section>
-      <section>
-        <h2 class="text-2xl font-bold">Projects</h2>
-        {projectsSorted.slice(0, 3).map((post) => <ProjectPreview project={post} />)}
-        </ul>
-      </section>
-      <section>
-        <h2 class="text-2xl font-bold">Posts</h2>
-        {postsSorted.slice(0, 3).map((post) => <PostPreview post={post} />)}
-      </section>
+      <Migration />
+
+      <!--   <section> -->
+      <!--     <h2 class="text-2xl font-bold">Featured</h2> -->
+      <!--     { -->
+      <!--       featured -->
+      <!--         .slice(0, 3) -->
+      <!--         .map((item) => -->
+      <!--           item.collection === "blog" ? ( -->
+      <!--             <PostPreview post={item} /> -->
+      <!--           ) : ( -->
+      <!--             <ProjectPreview project={item} /> -->
+      <!--           ), -->
+      <!--         ) -->
+      <!--     } -->
+      <!--   </section> -->
+      <!--   <section> -->
+      <!--     <h2 class="text-2xl font-bold">Projects</h2> -->
+      <!--     { -->
+      <!--       projectsSorted -->
+      <!--         .slice(0, 3) -->
+      <!--         .map((post) => <ProjectPreview project={post} />) -->
+      <!--     } -->
+      <!--   </section> -->
+      <!-- </section> -->
+      <!-- <section> -->
+      <!--   <h2 class="text-2xl font-bold">Posts</h2> -->
+      <!--   {postsSorted.slice(0, 3).map((post) => <PostPreview post={post} />)} -->
+      <!-- </section> -->
     </section>
 
     {/*  <Footer />  */}

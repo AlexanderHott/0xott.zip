@@ -4,6 +4,7 @@ title: "Doc Testing"
 tags:
   - python
 description: "Automatically keep your docs up to date."
+draft: true
 ---
 
 As pointed out by [CodeAesthetic](https://www.youtube.com/@CodeAesthetic) in his
@@ -34,29 +35,31 @@ correctness of comments.
 
 <div class="bg-neutral-900 p-4 rounded-lg">
 
-  <div class="text-center text-2xl font-bold">
-    <span class="bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent">//</span>
-    Commentlyly
-  </div>
+<div class="text-center text-2xl font-bold">
+  <span class="bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent">
+    //
+  </span>
+  Commentlyly
+</div>
 
-  "AI-powered documentation for code simple enough to be understood by AI"
+"AI-powered documentation for code simple enough to be understood by AI"
 
-  <div class="justify-self-center text-xl">Before</div>
+<div class="justify-self-center text-xl">Before</div>
 
-  ```java
-  public void setUp() {
-  }
-  ```
+```java
+public void setUp() {
+}
+```
 
-  <div class="justify-self-center text-xl">✨ After ✨</div>
+<div class="justify-self-center text-xl">✨ After ✨</div>
 
-  ```java
-  /**
-  * Sets the up.
-  */
-  public void setUp() {
-  }
-  ```
+```java
+/**
+* Sets the up.
+*/
+public void setUp() {
+}
+```
 
   <div class="flex justify-center">
   <a
@@ -71,8 +74,8 @@ correctness of comments.
   </div>
 </div>
 
-The greatest part, is that once your code has comments on everything,
-you'll need AI to keep them up to date.
+The greatest part, is that once your code has comments on everything, you'll
+need AI to keep them up to date.
 
 Maybe when Apple releases the
 [iLLM, AI will finally be smart.](https://daniel.haxx.se/blog/2024/01/02/the-i-in-llm-stands-for-intelligence/)
@@ -87,7 +90,7 @@ CodeAesthetic goes on to claim
 
 Which is interesting, because
 
-## Documentation suffers from the same issues that comments do.
+## Documentation suffers from the same issues that comments do
 
 Let's walk through an example.
 
@@ -97,9 +100,10 @@ def verify_password(password: str) -> bool:
       len(password) >= 8 and
       any(char.isupper() for char in password)
     )
-``` 
+```
 
-Well this is a pretty complex function, we should add some documentation on how to use it.
+Well this is a pretty complex function, we should add some documentation on how
+to use it.
 
 ```py
 def verify_password(password: str) -> bool:
@@ -117,7 +121,7 @@ def verify_password(password: str) -> bool:
     """
     Verifies that `password` is valid.
 
-    `password` is valid if 
+    `password` is valid if
     - it is at least 8 characters long.
     - it has at least one uppercase letter.
     """
@@ -134,7 +138,7 @@ def verify_password(password: str) -> bool:
     """
     Verifies that `password` is valid.
 
-    `password` is valid if 
+    `password` is valid if
     - it is at least 8 characters long.
     - it has at least one uppercase letter.
     """
@@ -146,7 +150,8 @@ def verify_password(password: str) -> bool:
 
 Phew, that was a close one, we almost got hacked.
 
-Now the frontend team goes to implement the sign-in page and sees the following documentation when they hover over the function.
+Now the frontend team goes to implement the sign-in page and sees the following
+documentation when they hover over the function.
 
 <div class="bg-neutral-900 p-4">
 ```python
@@ -159,16 +164,16 @@ Verifies that `password` is valid.
 
 - it is at least 8 characters long.
 - it has at least one uppercase letter.
-</div>
+  </div>
 
 The first line in the docstring is correct, but the implementation details are
 incorrect.
 
-Keeping specific details in the docstring is a bad idea. Instead, we can
-show a few examples of how the function works, and if the implementation 
-details are so important, **just read the code**.
+Keeping specific details in the docstring is a bad idea. Instead, we can show a
+few examples of how the function works, and if the implementation details are so
+important, **just read the code**.
 
-```python
+````python
 def verify_password(password: str) -> bool:
     """
     Verifies that `password` is valid.
@@ -199,7 +204,7 @@ def verify_password(password: str) -> bool:
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-```
+````
 
 ```bash
 python3 -m doctest -v verify_password.py
@@ -207,18 +212,17 @@ python3 -m doctest -v verify_password.py
 
 It may seem weird at first that comments have an effect on the code, you may be
 having flashbacks to
-[Tom](https://thedailywtf.com/articles/the-inner-json-effect),
-but this is very similar to [table](https://go.dev/wiki/TableDrivenTests)
-[tests](https://dave.cheney.net/2019/05/07/prefer-table-driven-tests) and preserves 
-[locality](https://www.youtube.com/watch?v=eMTFzpxR0QQ) 
-[of](https://grugbrain.dev/#grug-on-soc) 
+[Tom](https://thedailywtf.com/articles/the-inner-json-effect), but this is very
+similar to [table](https://go.dev/wiki/TableDrivenTests)
+[tests](https://dave.cheney.net/2019/05/07/prefer-table-driven-tests) and
+preserves [locality](https://www.youtube.com/watch?v=eMTFzpxR0QQ)
+[of](https://grugbrain.dev/#grug-on-soc)
 [behavior](https://htmx.org/essays/locality-of-behaviour/).
 
 Inevitably, when 20 character is too short and someone goes to update it to 32,
-the doctests will fail, forcing them to update the docs, and hopefully 
+the doctests will fail, forcing them to update the docs, and hopefully
 reconsider the entire docstring, fixing any differences between the words and
 the code.
-
 
 ## Python `doctest` snippet
 
@@ -256,6 +260,6 @@ def test_docstrings():
         assert res.failed == 0
 ```
 
+- <https://diataxis.fr/>
+- <https://diataxis.fr/reference/>
 
-- https://diataxis.fr/
-- https://diataxis.fr/reference/

@@ -7,5 +7,5 @@ tags:
   - research
 description: Using machine learning to optimize databases.
 draft: true
-featured: true
+featured: false
 ---

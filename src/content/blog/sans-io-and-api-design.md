@@ -7,6 +7,7 @@ tags:
   - python
   - api-design
 description: How IO free APIs un-color functions.
+draft: true
 ---
 
 xxd, an example of a data transformation
@@ -34,6 +35,6 @@ rust code for fun
 
 ## References
 
-- https://fasterthanli.me/articles/the-case-for-sans-io
-  (https://www.youtube.com/watch?v=RYHYiXMJdZI)
-- https://sans-io.readthedocs.io/
+- <https://fasterthanli.me/articles/the-case-for-sans-io>
+  (<https://www.youtube.com/watch?v=RYHYiXMJdZI>)
+- <https://sans-io.readthedocs.io/>

@@ -1,12 +1,13 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import PostPreview from "../../components/PostPreview.astro";
+import Migration from "@/components/Migration.astro";
 
 import { getCollection } from "astro:content";
 
 const nonDraftPosts = await getCollection(
   "blog",
-  ({ data }) => data.draft !== true,
+  (entry) => entry.data.draft === false,
 );
 ---
 
@@ -22,4 +23,5 @@ const nonDraftPosts = await getCollection(
       ))
     }
   </ul>
+  {nonDraftPosts.length === 0 && <Migration />}
 </Layout>

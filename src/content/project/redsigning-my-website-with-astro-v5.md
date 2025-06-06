@@ -11,7 +11,7 @@ draft: true
 1. redesign + new logo in figma
 1. look through [astro themes](https://astro.build/themes/)
 
-   1. https://github.com/satnaing/astro-paper
-   1. https://github.com/chrismwilliams/astro-theme-cactus
+   1. <https://github.com/satnaing/astro-paper>
+   1. <https://github.com/chrismwilliams/astro-theme-cactus>
 
 1. porting old content is easy
