@@ -16,8 +16,6 @@ const { id } = Astro.params;
 
 const post = await getEntry("blog", id)!;
 
-console.log({ post, id });
-
 const { title, description, canonicalURL, createdAt, updatedAt, tags } =
   post.data;
 

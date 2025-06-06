@@ -1,0 +1,5 @@
+name = "0xott"
+compatibility_date = "2025-06-05" # YYYY-MM-DD
+
+[assets]
+directory = "./dist"
