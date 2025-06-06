@@ -1,55 +1,109 @@
 ---
-import Hr from "../components/Hr.astro";
+import Hr from "@/components/Hr.astro";
 
-import Logo from "../assets/logo.svg";
-import Search from "../assets/icons/search.svg";
-import GitHub from "../assets/icons/github.svg";
+import Logo from "@/assets/logo.svg";
+import Search from "@/assets/icons/search.svg";
+import GitHub from "@/assets/icons/github.svg";
+import Menu from "@/assets/icons/menu.svg";
+import X from "@/assets/icons/x.svg";
 
 const currentPath = Astro.url.pathname;
 
 const ROUTES = {
   home: "/",
   blog: "/blog",
-  projects: "/projects",
-  me: "/me",
+  // projects: "/projects",
+  // me: "/me",
 };
 ---
 
-<nav class="flex items-center justify-between">
-  <div class="flex items-center gap-4">
-    <a href="/" class="flex items-center gap-2">
-      <Logo title="logo" width={64} height={64} />
-      <h1 class="text-2xl">0×ott</h1>
-    </a>
-  </div>
-  <ul class="flex flex-row gap-4">
-    {
-      Object.entries(ROUTES).map(([name, route]) => (
-        <li>
-          <a
-            href={route}
-            class={
-              currentPath === route ||
-              (currentPath.startsWith(route) && route !== "/")
-                ? "decoration-primary hover:text-primary underline decoration-wavy underline-offset-4"
-                : "hover:text-primary"
-            }
-          >
-            {name}
-          </a>
-        </li>
-      ))
-    }
-    <!-- <li> -->
-    <!--   <a href="/search"> -->
-    <!--     <Search title="search" /> -->
-    <!--   </a> -->
-    <!-- </li> -->
-    <li>
-      <a href="https://github.com/AlexanderHOtt" target="_blank">
-        <GitHub title="GitHub" />
+<div class="flex w-full flex-col gap-4">
+  <div class="flex w-full items-center justify-between">
+    <!-- Logo -->
+    <div class="flex items-center gap-4">
+      <a href="/" class="flex items-center gap-2">
+        <Logo title="logo" width={64} height={64} />
+        <h1 class="text-2xl">0×ott</h1>
       </a>
-    </li>
-  </ul>
-</nav>
+    </div>
+    <!-- Mobile Nav -->
+    <button
+      id="mobile-nav-menu-toggle"
+      class="sm:hidden"
+      aria-label="nav menu toggle"
+      ><Menu id="mobile-nav-open-icon" class="size-6" />
+      <X id="mobile-nav-close-icon" class="hidden size-6" />
+    </button>
+    <!-- Desktop Nav -->
+    <ul class="hidden sm:flex sm:flex-row sm:gap-4">
+      {
+        Object.entries(ROUTES).map(([name, route]) => (
+          <li>
+            <a
+              href={route}
+              class={
+                currentPath === route ||
+                (currentPath.startsWith(route) && route !== "/")
+                  ? "decoration-primary hover:text-primary underline decoration-wavy underline-offset-4"
+                  : "hover:text-primary"
+              }
+            >
+              {name}
+            </a>
+          </li>
+        ))
+      }
+      <!-- <li> -->
+      <!--   <a href="/search"> -->
+      <!--     <Search title="search" /> -->
+      <!--   </a> -->
+      <!-- </li> -->
+      <li>
+        <a href="https://github.com/AlexanderHOtt" target="_blank">
+          <GitHub title="GitHub" />
+        </a>
+      </li>
+    </ul>
+  </div>
+  <nav id="mobile-nav-menu" class="hidden">
+    <ul class="flex flex-col items-center gap-4">
+      {
+        Object.entries(ROUTES).map(([name, route]) => (
+          <li>
+            <a
+              href={route}
+              class={
+                currentPath === route ||
+                (currentPath.startsWith(route) && route !== "/")
+                  ? "decoration-primary hover:text-primary underline decoration-wavy underline-offset-4"
+                  : "hover:text-primary"
+              }
+            >
+              {name}
+            </a>
+          </li>
+        ))
+      }
+      <li>
+        <a href="https://github.com/AlexanderHOtt" target="_blank">
+          <GitHub title="GitHub" />
+        </a>
+      </li>
+    </ul>
+  </nav>
+</div>
 <Hr />
+
+<script>
+  document
+    .getElementById("mobile-nav-menu-toggle")
+    ?.addEventListener("click", () => {
+      const navOpenIcon = document.getElementById("mobile-nav-open-icon");
+      const navCloseIcon = document.getElementById("mobile-nav-close-icon");
+      const menu = document.getElementById("mobile-nav-menu");
+
+      navOpenIcon?.classList.toggle("hidden");
+      navCloseIcon?.classList.toggle("hidden");
+      menu?.classList.toggle("hidden");
+    });
+</script>
