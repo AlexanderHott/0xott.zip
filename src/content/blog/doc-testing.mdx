@@ -154,9 +154,9 @@ Now the frontend team goes to implement the sign-in page and sees the following
 documentation when they hover over the function.
 
 <div class="bg-neutral-900 p-4">
-```python
-(function) def verify_password(password: str) -> bool
-```
+  ```python
+  (function) def verify_password(password: str) -> bool
+  ```
 
 Verifies that `password` is valid.
 
@@ -164,7 +164,8 @@ Verifies that `password` is valid.
 
 - it is at least 8 characters long.
 - it has at least one uppercase letter.
-  </div>
+
+</div>
 
 The first line in the docstring is correct, but the implementation details are
 incorrect.
@@ -260,6 +261,5 @@ def test_docstrings():
         assert res.failed == 0
 ```
 
-- <https://diataxis.fr/>
-- <https://diataxis.fr/reference/>
-
+- [diataxis.fr](https://diataxis.fr)
+- [diataxis.fr/reference/](https://diataxis.fr/reference/)
