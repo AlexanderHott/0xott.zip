@@ -1,0 +1,261 @@
+---
+createdAt: 2025-05-15T03:46:30.227Z
+title: "Doc Testing"
+tags:
+  - python
+description: "Automatically keep your docs up to date."
+---
+
+As pointed out by [CodeAesthetic](https://www.youtube.com/@CodeAesthetic) in his
+amazing video titled
+["Don't Write Comments"](https://www.youtube.com/watch?v=Bf7vDBBOBUA) (really,
+go watch it.)
+
+> Comments get bugs like code. When people make changes to code, they often
+> don't update the comments to match.
+
+e.g.
+
+```py
+# Verifies the password is at least 8 characters long
+if len(password) < 10:
+    return False
+```
+
+He is 100% correct, but then goes on to say
+
+> But unlike comments, we have tools to stop bugs from entering code. We have
+> tests, compiler checks and linting. We don't have any system like that for
+> comments.
+
+[As ThePrimeagen (ThePrimeagen mentioned) points out in an _obviously pre-watched_ reaction](https://www.youtube.com/watch?v=k5DJxz6_xMA&t=432s),
+there is definately going to be an AI startup that will check/generate the
+correctness of comments.
+
+<div class="bg-neutral-900 p-4 rounded-lg">
+
+  <div class="text-center text-2xl font-bold">
+    <span class="bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent">//</span>
+    Commentlyly
+  </div>
+
+  "AI-powered documentation for code simple enough to be understood by AI"
+
+  <div class="justify-self-center text-xl">Before</div>
+
+  ```java
+  public void setUp() {
+  }
+  ```
+
+  <div class="justify-self-center text-xl">✨ After ✨</div>
+
+  ```java
+  /**
+  * Sets the up.
+  */
+  public void setUp() {
+  }
+  ```
+
+  <div class="flex justify-center">
+  <a
+    target="_blank"
+    href="http://127.0.0.1:3000/sign-up"
+  >
+    <button class="cursor-pointer rounded-md bg-black px-4 py-2 text-center text-xl font-bold text-white no-underline">{"Get started with "}
+      <span class="bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent">Commentlyly AI</span>
+      {" for free"}
+    </button>
+    </a>
+  </div>
+</div>
+
+The greatest part, is that once your code has comments on everything,
+you'll need AI to keep them up to date.
+
+Maybe when Apple releases the
+[iLLM, AI will finally be smart.](https://daniel.haxx.se/blog/2024/01/02/the-i-in-llm-stands-for-intelligence/)
+
+But I'm not here to talk about AI today.
+
+CodeAesthetic goes on to claim
+
+> Comments can lie, but code cannot. So when trying to understand what a piece
+> of code does, I read the code. I never read the comments. ... What I do read
+> is code documentation.
+
+Which is interesting, because
+
+## Documentation suffers from the same issues that comments do.
+
+Let's walk through an example.
+
+```py
+def verify_password(password: str) -> bool:
+    return (
+      len(password) >= 8 and
+      any(char.isupper() for char in password)
+    )
+``` 
+
+Well this is a pretty complex function, we should add some documentation on how to use it.
+
+```py
+def verify_password(password: str) -> bool:
+    """Verifies that `password` is valid."""
+    return (
+      len(password) >= 8 and
+      any(char.isupper() for char in password)
+    )
+```
+
+Well duh, it's literally called `verify_password`.
+
+```py
+def verify_password(password: str) -> bool:
+    """
+    Verifies that `password` is valid.
+
+    `password` is valid if 
+    - it is at least 8 characters long.
+    - it has at least one uppercase letter.
+    """
+    return (
+      len(password) >= 8 and
+      any(char.isupper() for char in password)
+    )
+```
+
+Computers are advancing, 8 characters is no longer enough.
+
+```py
+def verify_password(password: str) -> bool:
+    """
+    Verifies that `password` is valid.
+
+    `password` is valid if 
+    - it is at least 8 characters long.
+    - it has at least one uppercase letter.
+    """
+    return (
+      len(password) >= 20 and
+      any(char.isupper() for char in password)
+    )
+```
+
+Phew, that was a close one, we almost got hacked.
+
+Now the frontend team goes to implement the sign-in page and sees the following documentation when they hover over the function.
+
+<div class="bg-neutral-900 p-4">
+```python
+(function) def verify_password(password: str) -> bool
+```
+
+Verifies that `password` is valid.
+
+`password` is valid if
+
+- it is at least 8 characters long.
+- it has at least one uppercase letter.
+</div>
+
+The first line in the docstring is correct, but the implementation details are
+incorrect.
+
+Keeping specific details in the docstring is a bad idea. Instead, we can
+show a few examples of how the function works, and if the implementation 
+details are so important, **just read the code**.
+
+```python
+def verify_password(password: str) -> bool:
+    """
+    Verifies that `password` is valid.
+
+    ```python
+    >>> verify_password("password")
+    False
+
+    >>> verify_password("Password123")
+    False
+
+    >>> verify_password("Tr0ub4dor&3")
+    False
+
+    >>> verify_password("correct horse battery staple")
+    False
+
+    >>> verify_password("correct Horse battery staple")
+    True
+
+    \```
+    """
+    return (
+      len(password) >= 20 and
+      any(char.isupper() for char in password)
+    )
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
+```
+
+```bash
+python3 -m doctest -v verify_password.py
+```
+
+It may seem weird at first that comments have an effect on the code, you may be
+having flashbacks to
+[Tom](https://thedailywtf.com/articles/the-inner-json-effect),
+but this is very similar to [table](https://go.dev/wiki/TableDrivenTests)
+[tests](https://dave.cheney.net/2019/05/07/prefer-table-driven-tests) and preserves 
+[locality](https://www.youtube.com/watch?v=eMTFzpxR0QQ) 
+[of](https://grugbrain.dev/#grug-on-soc) 
+[behavior](https://htmx.org/essays/locality-of-behaviour/).
+
+Inevitably, when 20 character is too short and someone goes to update it to 32,
+the doctests will fail, forcing them to update the docs, and hopefully 
+reconsider the entire docstring, fixing any differences between the words and
+the code.
+
+
+## Python `doctest` snippet
+
+```python
+# test_docstrings.py
+import importlib
+import pkgutil
+import types
+import typing as t
+import doctest
+
+import my_module
+
+
+def test_docstrings():
+    def iter_modules(package: types.ModuleType) -> t.Generator[types.ModuleType]:
+        if not hasattr(package, "__path__"):
+            return
+        for _, name, ispkg in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
+            try:
+                module = importlib.import_module(name)
+                yield module
+                if ispkg:
+                    yield from iter_modules(module)
+            except Exception as e:
+                print(f"Skipping {name} due to import error: {e}")
+
+    verbose = True
+
+    res = doctest.testmod(my_module, verbose=verbose)
+    assert res.failed == 0
+
+    for module in iter_modules(my_module):
+        res = doctest.testmod(module, verbose=verbose)
+        assert res.failed == 0
+```
+
+
+- https://diataxis.fr/
+- https://diataxis.fr/reference/

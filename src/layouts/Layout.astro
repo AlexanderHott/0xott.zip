@@ -27,8 +27,25 @@ import "../styles/global.css";
       >skip to main content</a
     >
     <div class="mx-auto flex max-w-3xl flex-col gap-8 p-4">
+      <div class="caution-bg flex items-center justify-center">
+        <span class="text-shadow text-center text-3xl font-bold"
+          >Under Construction</span
+        >
+      </div>
       <Nav />
       <slot />
     </div>
   </body>
 </html>
+
+<style>
+  .caution-bg {
+    background: repeating-linear-gradient(
+      45deg,
+      hsl(142.8 64.2% 24.1%),
+      hsl(142.8 64.2% 24.1%) 20px,
+      hsl(0, 0%, 9%) 20px,
+      hsl(0, 0%, 9%) 40px
+    );
+  }
+</style>
