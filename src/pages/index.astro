@@ -53,7 +53,7 @@ const featured = [...postsFeatured, ...projectsFeatured];
 
       <Hr />
 
-      <Migration />
+      <!-- <Migration /> -->
 
       <!--   <section> -->
       <!--     <h2 class="text-2xl font-bold">Featured</h2> -->
@@ -69,14 +69,14 @@ const featured = [...postsFeatured, ...projectsFeatured];
       <!--         ) -->
       <!--     } -->
       <!--   </section> -->
-      <!--   <section> -->
-      <!--     <h2 class="text-2xl font-bold">Projects</h2> -->
-      <!--     { -->
-      <!--       projectsSorted -->
-      <!--         .slice(0, 3) -->
-      <!--         .map((post) => <ProjectPreview project={post} />) -->
-      <!--     } -->
-      <!--   </section> -->
+      <section>
+        <h2 class="text-2xl font-bold">Projects</h2>
+        {
+          projectsSorted
+            .slice(0, 3)
+            .map((post) => <ProjectPreview project={post} />)
+        }
+      </section>
       <!-- </section> -->
       <!-- <section> -->
       <!--   <h2 class="text-2xl font-bold">Posts</h2> -->
