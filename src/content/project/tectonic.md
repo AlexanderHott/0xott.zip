@@ -15,4 +15,6 @@ featured: true
 
 <https://vldb.org/2025/>
 
+<a href="/projects/tectonic/tectonic.pdf" target="_blank">Paper</a>
+
 More info coming soon...
