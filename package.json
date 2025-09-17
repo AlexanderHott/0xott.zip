@@ -10,9 +10,10 @@
     "format": "prettier . --write"
   },
   "dependencies": {
-    "@astrojs/mdx": "4.3.4",
+    "@astrojs/mdx": "4.3.5",
+    "@astrojs/rss": "^4.0.12",
     "@tailwindcss/vite": "^4.1.4",
-    "astro": "5.13.2",
+    "astro": "5.13.8",
     "katex": "^0.16.22",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
