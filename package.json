@@ -10,10 +10,11 @@
     "format": "prettier . --write"
   },
   "dependencies": {
-    "@astrojs/mdx": "4.3.5",
-    "@astrojs/rss": "^4.0.12",
+    "@astrojs/mdx": "4.3.12",
+    "@astrojs/rss": "4.0.14",
     "@tailwindcss/vite": "^4.1.4",
-    "astro": "5.13.8",
+    "astro": "5.16.4",
+    "astro-expressive-code": "^0.41.3",
     "katex": "^0.16.22",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",

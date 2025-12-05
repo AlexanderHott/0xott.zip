@@ -1,0 +1,183 @@
+---
+createdAt: 2025-11-24T22:16:13.210Z
+title: "Methods"
+tags:
+  - language-design
+description: "..."
+draft: true
+---
+
+disclaimer about "readability"
+
+Methods are great, and method chaining is one of the most readable forms of
+syntax for repeated function application that exists.
+
+(Even math people made a syntax for it $y = (c \circ b \circ a)(x)$)
+
+You might know the three main contenders:
+
+```rs
+// c-style plain functions
+let y = c(b(a(x)));
+
+// method chaining
+let y = x.a().b().c();
+
+// piping
+let y = x |> a() |> b() |> c()
+```
+
+plain functions are really bad for readability, you need to go to the center of
+the line, and when there are multiple arguments and multiple lines, it gets
+really messy.
+
+method chaining and pipes pretty much have the same "readability"
+
+```rs
+let y = a_really_long_funciton(
+    argument_1,
+    argument2,
+    argument_3,
+    another_really_long_function(
+        argument_4,
+        argument_5,
+        a_third_really_long_function(x),
+    ),
+);
+
+let y = x.a_third_really_long_function()
+    .another_really_long_function(
+        argument_4,
+        argument_5,
+    )
+    .a_really_long_funciton(
+        argument_1,
+        argument2,
+        argument_3,
+    );
+
+let y = x
+    |> a_third_really_long_function()
+    |> another_really_long_function(
+        argument_4,
+        argument_5,
+    )
+    |> a_really_long_funciton(
+        argument_1,
+        argument2,
+        argument_3,
+    );
+```
+
+However, a challenge arises when you need to implement functions for "foreign
+types" (as rust calls it)
+
+How do I implement the `int::is_coprime(other: int) -> bool` method on a type?
+
+In rust, you can't. You must use a wrapper type, or a plain function. The
+wrapper type falls apart quickly, so you end up with a mix of methods and
+functions.
+
+```rs
+let y = is_coprime(
+    x,
+    257.next_power_of_two()
+).xor(is_prime(257))
+
+let y = x
+    |> is_coprime(257.next_power_of_two())
+    .xor(x |> is_prime())
+```
+
+However, this is still a bit wonky. Roc may introduce the `->` operator. No, its
+not dereference and fixed offset like C and C++, its the pipe operator but for
+method chaining.
+
+```rs
+let y = x
+    ->is_coprime(257.next_power_of_two())
+    .xor(x->is_prime())
+```
+
+It is an objective fact that the difference in C and C++ is useless, because you
+can only ever use the `.` or the `->`, not both. The compiler should fix this
+for you. (CLion, does fix it for you. If you press `.` and then press enter on a
+struct field, it will change the `.` to a `->` if it is behind a reference.)
+
+However, in Roc, you could have a method with `.`, or a function with `->`.
+
+<https://roc.zulipchat.com/#narrow/channel/304641-ideas/topic/static.20dispatch.20-.20pass_to.20alternative/near/490730736>
+
+```rs
+let y = ...;
+```
+
+```
+main! = |_|
+    "./input.txt"
+    .>Path.from_str()
+    .read_bytes!()?
+    .>Foo.from_bytes()?
+    .>transform(2, Much)
+    .to_bytes()?
+    .>Path.write_bytes!(Path.from_str("./output.txt"))
+
+main! = |_|
+    "./input.txt"
+    |>Path.from_str()
+    .read_bytes!()?
+    |>Foo.from_bytes()?
+    |>transform(2, Much)
+    .to_bytes()?
+    |>Path.write_bytes!(Path.from_str("./output.txt"))
+
+main! = |_|
+    "./input.txt"
+    ->Path.from_str()
+    .read_bytes!()?
+    ->Foo.from_bytes()?
+    ->transform(2, Much)
+    .to_bytes()?
+    ->Path.write_bytes!(Path.from_str("./output.txt"))
+
+main! = |_|
+    "./input.txt"
+   ->Path.from_str()
+    .read_bytes!()?
+   ->Foo.from_bytes()?
+   ->transform(2, Much)
+    .to_bytes()?
+   ->Path.write_bytes!(Path.from_str("./output.txt"))
+
+let y =
+    "./input.txt"
+    →Path.from_str()
+    .read_bytes!()?
+    →Foo.from_bytes()?
+    →transform(2, Much)
+    .to_bytes()?
+    →Path.write_bytes!(Path.from_str("./output.txt"))
+
+main! = |_|
+    "./input.txt"
+    :Path.from_str()
+    .read_bytes!()?
+    :Foo.from_bytes()?
+    :transform(2, Much)
+    .to_bytes()?
+    :Path.write_bytes!(Path.from_str("./output.txt"))
+
+main! = |_|
+    "./input.txt"
+    .Path::from_str()
+    .read_bytes!()?
+    .Foo::from_bytes()?
+    .transform(2, Much)
+    .to_bytes()?
+    .Path::write_bytes!(Path::from_str("./output.txt"))
+```
+
+Why can you just use `.`?
+<https://roc.zulipchat.com/#narrow/channel/304641-ideas/topic/static.20dispatch.20-.20pass_to.20alternative/near/499385130>
+
+fp - oop
