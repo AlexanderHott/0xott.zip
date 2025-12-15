@@ -19,7 +19,7 @@ if (post.data.updatedAt) {
 <article>
   <div class="relative isolate">
     <h3
-      class="text-primary text-lg underline-offset-4 hover:underline hover:decoration-wavy"
+      class="text-primary-foreground text-lg underline-offset-4 hover:underline hover:decoration-wavy"
     >
       <a href={`/blog/${post.id}`} class="">
         {post.data.title}
@@ -30,16 +30,16 @@ if (post.data.updatedAt) {
       <Calendar size={16} />
       <time
         datetime={time.toISOString()}
-        class="text-sm text-neutral-400 italic">{timeStr}</time
+        class="text-muted-foreground text-sm italic">{timeStr}</time
       >
     </div>
     <p>{post.data.description}</p>
   </div>
-  <ul class="flex gap-2">
+  <ul class="flex flex-wrap gap-2">
     {
       post.data.tags.map((tag) => (
         <a
-          class="hover:text-primary text-sm text-neutral-400 underline-offset-4 hover:underline hover:decoration-wavy"
+          class="hover:text-primary-foreground text-muted-foreground text-sm underline-offset-4 hover:underline hover:decoration-wavy"
           href="#"
         >
           <li>#{tag}</li>

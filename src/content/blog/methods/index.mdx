@@ -9,10 +9,29 @@ draft: true
 
 disclaimer about "readability"
 
-Methods are great, and method chaining is one of the most readable forms of
-syntax for repeated function application that exists.
+Sometimes method chaining is good, sometimes its bad.
 
-(Even math people made a syntax for it $y = (c \circ b \circ a)(x)$)
+talk about
+
+```rs
+let x = 10usize;
+let y = is_coprime(x, 257usize.next_power_of_two()).bitxor(is_prime(257));
+
+let z = x
+    :is_coprime(
+    257usize.next_power_of_two()
+    )
+    .bitxor(is_prime(257));
+
+let x_is_coprime = is_coprime(x, 257usize.next_power_of_two());
+let other_is_prime = is_prime(257);
+let prime_and_coprime_different = x_is_coprime ^ other_is_prime;
+```
+
+Methods are great, and method chaining is one of the most readable forms of
+syntax for _repeated function application_ that exists.
+
+(Even math people made a notation for it: $y = (c \circ b \circ a)(x)$)
 
 You might know the three main contenders:
 
@@ -27,11 +46,16 @@ let y = x.a().b().c();
 let y = x |> a() |> b() |> c()
 ```
 
+(The `|>` may display as a ligature of the `|` and `>` characters.)
+
 plain functions are really bad for readability, you need to go to the center of
 the line, and when there are multiple arguments and multiple lines, it gets
 really messy.
 
 method chaining and pipes pretty much have the same "readability"
+
+TODO: reorder functions so method chaining and piping have the first -> second
+-> thrid order
 
 ```rs
 let y = a_really_long_funciton(
@@ -45,7 +69,8 @@ let y = a_really_long_funciton(
     ),
 );
 
-let y = x.a_third_really_long_function()
+let y = x
+    .a_third_really_long_function()
     .another_really_long_function(
         argument_4,
         argument_5,
@@ -72,10 +97,10 @@ let y = x
 However, a challenge arises when you need to implement functions for "foreign
 types" (as rust calls it)
 
-How do I implement the `int::is_coprime(other: int) -> bool` method on a type?
+How do I implement the `i32::is_coprime(other: i32) -> bool` method on a type?
 
 In rust, you can't. You must use a wrapper type, or a plain function. The
-wrapper type falls apart quickly, so you end up with a mix of methods and
+wrapper type falls apart quickly; you end up with a mix of methods and
 functions.
 
 ```rs
@@ -106,13 +131,13 @@ struct field, it will change the `.` to a `->` if it is behind a reference.)
 
 However, in Roc, you could have a method with `.`, or a function with `->`.
 
-<https://roc.zulipchat.com/#narrow/channel/304641-ideas/topic/static.20dispatch.20-.20pass_to.20alternative/near/490730736>
+[https://roc.zulipchat.com/#narrow/channel/304641-ideas/topic/static.20dispatch.20-.20pass_to.20alternative/near/490730736](https://roc.zulipchat.com/#narrow/channel/304641-ideas/topic/static.20dispatch.20-.20pass_to.20alternative/near/490730736)
 
 ```rs
 let y = ...;
 ```
 
-```
+```rs
 main! = |_|
     "./input.txt"
     .>Path.from_str()
@@ -177,7 +202,7 @@ main! = |_|
     .Path::write_bytes!(Path::from_str("./output.txt"))
 ```
 
-Why can you just use `.`?
-<https://roc.zulipchat.com/#narrow/channel/304641-ideas/topic/static.20dispatch.20-.20pass_to.20alternative/near/499385130>
+Why can't you just use `.`?
+[roc zulip](https://roc.zulipchat.com/#narrow/channel/304641-ideas/topic/static.20dispatch.20-.20pass_to.20alternative/near/499385130)
 
 fp - oop

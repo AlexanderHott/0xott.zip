@@ -6,6 +6,7 @@ import { getCollection } from "astro:content";
 import PostPreview from "../components/PostPreview.astro";
 import ProjectPreview from "../components/ProjectPreview.astro";
 import Migration from "@/components/Migration.astro";
+import katex from "katex";
 
 const posts = await getCollection(
   "blog",
@@ -26,6 +27,11 @@ const projectsSorted = projects.toSorted(
 const postsFeatured = postsSorted.filter((post) => post.data.featured);
 const projectsFeatured = projectsSorted.filter((proj) => proj.data.featured);
 const featured = [...postsFeatured, ...projectsFeatured];
+
+var mathematicsHtml = katex.renderToString(
+  "\\mathcal{M}\\alpha\\mathcal{T}\\hbar\\varepsilon\\mu(a_t)\\imath\\mathbb{C}\\varsigma",
+  { throwOnError: true }, // fine because this code is executed at build time
+);
 ---
 
 <Layout>
@@ -40,15 +46,21 @@ const featured = [...postsFeatured, ...projectsFeatured];
           title="RSS Feed"
           class="text-primary"
         >
-          <Rss title="RSS Feed" />
+          <Rss />
         </a>
       </div>
 
       <p>Hey, 🌊</p>
       <p>
-        I'm an undergraduate at Brandeis University majoring in Computer Science
-        and Applied Math. I plan on getting a PhD in something with systems,
-        data systems, distributed systems, or security.
+        I'm an undergraduate at Brandeis University majoring in <span
+          class="text-[#8c4351] dark:text-[#f7768e]">Computer</span
+        >::<span
+          class="text-[#2959aa] underline decoration-red-500 decoration-wavy dark:text-[#7aa2f7]"
+          >science</span
+        >() and <span aria-label="Mathematics" set:html={mathematicsHtml} />. I
+        was planing to start PhD in systems, data systems, distributed systems,
+        or programming language design, but my plans have since changed. I'm
+        taking time off to work on a startup I co-founded with an alumni.
       </p>
 
       <Hr />

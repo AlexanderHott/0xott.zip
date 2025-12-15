@@ -8,6 +8,15 @@ description: "..."
 draft: false
 ---
 
+TODO:
+
+write time vs read time abstractions
+
+- functions
+- find and replace
+
+---
+
 - sometimes you need similar behavior with a few changes
 
   - example: ask OS for access to a file
@@ -99,29 +108,28 @@ fn main() {
 
 ---
 
-Sometimes when programming, you need to do some process multiple times, with a
-small change to the logic. This sounds like a prime candidate for a function
-with some `if` statements, _but how do you actually get the data to the `if`
-statements inside the function?_
+When programming, you often end up with blocks of code that you need to use in
+multiple places. It's common to extract them into functions. When your
+requirements change in one of the places the function is used, instead of
+writing a totally new function, you can pass information to the function so that
+it behaves differently.
 
-Let's take the example of opening a file. When you ask the OS to give you access
-to a file, on Linux, there are a few different options that change the behavior
-of what happens when you use the file:
+Let's take the example of opening a file. When you ask the Linux kernel to give
+you access to a file, there are a few different options that change the behavior
+of how you can use file:
 
-- **read**: permission to read the file
-- **write**: permission to write the file
-- **append**: append new writes to the end instead of overwriting
+- **read**: permission to read from the file
+- **write**: permission to write to the file
+- **append**: writes append new writes to the end instead of overwriting
 - **truncate**: sets the length to 0
 - **create**: create the file if it doesn't exist
-- **create_new**: create the file if it doesn't exist, and fails if it does
-  exist
+- **create_new**: create the file if it doesn't exist, and fail if it does exist
 
 How would _you_ write a function with that interface, allowing users to specify
 which options they want?
 
-Here is the most [simple](https://www.youtube.com/watch?v=SxdOUGdseq4) version
-of the function in C. Note that in C, files (file descriptors) are represented
-as `int`s. If opening the file fails, then the return value will be 0.
+Here a very simple version of the API in C. Note, that files are represented as
+`int`s in C. If opening the file fails, then the return value will be 0.
 
 ```c
 int open(
@@ -148,15 +156,13 @@ int main(void) {
     true,
     false
   );
-  return 0;
 }
 ```
 
 I'm not sure about you, but if I saw that code in the wild, I would have no idea
-what it did... if I didn't have any
-IDE/[PDE](https://www.youtube.com/watch?v=QMVIJhC9Veg) tooling, but I use an
-IDE, and (most) IDEs support inlay hints. Instead of reading a list of cryptic
-bool parameters, they are labeled with what they do.
+what it did... if I didn't have any IDE tooling, but I use an IDE, and (most)
+IDEs support inlay hints. Instead of reading a list of cryptic `bool`
+parameters, they are labeled.
 
 ```c
 int main(void) {
@@ -173,7 +179,9 @@ int main(void) {
 }
 ```
 
-that isn't as bad, but libc actually uses bit flags.
+That OK, but we can do better.
+
+`open` from `libc` actually uses bit flags.
 
 ```c
 int open(
@@ -182,6 +190,8 @@ int open(
   const int mode
 );
 ```
+
+Using it looks like
 
 ```c
 int main(void) {
@@ -193,13 +203,220 @@ int main(void) {
 One sneaky thing that bit flags allow you to do is to have defaults. If a flag
 isn't specified, it's slot in the `int` will be 0.
 
-Now, bit flags aren't always available, so what else can you do to avoid
-specifying every parameter every time.
+Bit flags are great, but they only let you represent boolean options, so what
+are the ways that you can pass options to a function?
 
-There are 4 primary methods of supplying options to a piece of code: 1.
-specifying all parameters each time, 2. using multiple functions with function
-overloading or similar names, 3. using an options struct, or 4. using the
-builder pattern.
+Forgive me for trying to fit a 3d table into a 2d screen.
+
+| no order / order | multiple arguments                                                                 | single argument                                                                       |
+| ---------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **no defaults**  | specifying all parameters at the call site w/ named arguments / no named arguments | manually writing the options struct / writing the fields in order                     |
+| **defaults**     | named arguments / default arguments, function overloading                          | struct update syntax, bitflags, using the builder pattern / typestate builder pattern |
+
+## Multiple Arguments, No Defaults
+
+```rust
+// 1. Multiple Arguments, No Defaults, No Order
+fn open(
+  path: impl AsRef<Path>,
+  read: bool,
+  write: bool,
+  append: bool,
+  truncate: bool,
+  create: bool,
+  create_new: bool,
+) -> io::Result<File> { todo!() }
+open(
+  "foo.txt",
+  true,
+  true,
+  true,
+  true,
+  false,
+  false,
+);
+
+// 2. Multiple Arguments, No Defaults, Order
+fn open(
+  path: impl AsRef<Path>,
+  read: bool,
+  write: bool,
+  append: bool,
+  truncate: bool,
+  create: bool,
+  create_new: bool,
+) -> io::Result<File> { todo!() }
+open(
+  "foo.txt"
+  read=true,
+  write=true,
+  append=true,
+  create=true,
+  truncate=false,
+  create_new=false,
+);
+
+// 3. Multiple Arguments, Defaults, No Order (C++)
+fn open(
+  path: impl AsRef<Path>,
+  read: bool = false,
+  write: bool = false,
+  append: bool = false,
+  truncate: bool = false,
+  create: bool = false,
+  create_new: bool = false,
+) -> io::Result<File> { todo!() }
+// Note: we can only leave off the last argument, because they arent named
+open("foo.txt", true, true, true, false, true);
+
+// 4. Multiple Arguments, Defaults, Order
+fn open(
+  path: impl AsRef<Path>,
+  read: bool = false,
+  write: bool = false,
+  append: bool = false,
+  truncate: bool = false,
+  create: bool = false,
+  create_new: bool = false,
+) -> io::Result<File> { todo!() }
+open(
+  "foo.txt",
+  read=true,
+  write=true,
+  append=true,
+  create=true
+);
+
+#[derive(Default)]
+struct OpenOptions {
+  read: bool,
+  write: bool,
+  append: bool,
+  truncate: bool,
+  create: bool,
+  create_new: bool,
+}
+
+// 5. Single Argument, No Defaults, No Order
+fn open(
+  path: impl AsRef<Path>,
+  opts: OpenOptions,
+) -> io::Result<File> { todo!() }
+open(
+  "foo.txt",
+  OpenOptions {
+    read: true,
+    write: true,
+    append: true,
+    truncate: false,
+    create: true,
+    create_new: false,
+  },
+);
+
+// 6. Single Argument, No Defaults, Order
+fn open(
+  path: impl AsRef<Path>,
+  opts: OpenOptions,
+) -> io::Result<File> { todo!() }
+open(
+  "foo.txt",
+  OpenOptions {
+    read: true,
+    write: true,
+    append: true,
+    truncate: false,
+    create: true,
+    create_new: false,
+  },
+);
+let opts = OpenOptions::builder()
+  .read(true),
+  .write(true)
+  .append(true),
+  .create(true),
+  .truncate(false),
+  .create_new(false);
+open("foo.txt", opts);
+
+// 7. Single Argument, Defaults, No Order
+fn open(
+  path: impl AsRef<Path>,
+  opts: OpenOptions,
+) -> io::Result<File> { todo!() }
+open(
+  "foo.txt",
+  OpenOptions {
+    read: true,
+    write: true,
+    append: true,
+    create: true,
+  },
+);
+let opts = OpenOptions::builder()
+  .read(true),
+  .write(true)
+  .append(true),
+  .create(true);
+open("foo.txt", opts);
+use OpenOptions as OO;
+open("foo.txt": OO::Read | OO::Write | OO::Append | OO::Create);
+
+// 8. Single Argument, Defaults, Order
+fn open(
+  path: impl AsRef<Path>,
+  opts: OpenOptions,
+) -> io::Result<File> { todo!() }
+open(
+  "foo.txt",
+  OpenOptions {
+    read: true,
+    write: true,
+    append: true,
+    create: true,
+  },
+);
+let opts = OpenOptions::builder()
+  .read(true),
+  .write(true)
+  .append(true),
+  .create(true);
+open("foo.txt", opts);
+```
+
+Another example
+
+```rust
+struct Ast;
+
+struct TargetTriple(String);
+impl Default for TargetTriple {
+  fn default() -> Self()
+}
+enum OptimizationLevel {
+  None,
+  Basic,
+  Some,
+  Full,
+  Size,
+}
+enum DebugSymbols {
+  Off,
+  On,
+}
+
+fn compile(
+  ast: Ast,
+  target: &TargetTriple,
+
+
+)
+
+
+
+```
+
+Single Argument, Multiple Data: SAMD
 
 ### 1. All the parameters, all the time
 

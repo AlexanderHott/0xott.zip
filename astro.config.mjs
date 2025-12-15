@@ -17,10 +17,16 @@ export default defineConfig({
     plugins: [tailwindcss()],
   },
 
-  integrations: [expressiveCode(), mdx()],
+  integrations: [
+    expressiveCode({
+      styleOverrides: {
+        codeFontFamily: "GeistMono",
+      },
+    }),
+    mdx(),
+  ],
   markdown: {
     remarkPlugins: [remarkMath],
     rehypePlugins: [rehypeKatex],
   },
 });
-
