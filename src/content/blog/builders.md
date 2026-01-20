@@ -108,11 +108,8 @@ fn main() {
 
 ---
 
-When programming, you often end up with blocks of code that you need to use in
-multiple places. It's common to extract them into functions. When your
-requirements change in one of the places the function is used, instead of
-writing a totally new function, you can pass information to the function so that
-it behaves differently.
+I often end up with blocks of code that I need to reuse. I refactor them into reusable functions, which often needs some
+data which get passed as one or more arguments. What is the best way to pass data as arguments?
 
 Let's take the example of opening a file. When you ask the Linux kernel to give
 you access to a file, there are a few different options that change the behavior
@@ -809,3 +806,17 @@ enforce the order they were set in.
 
 - <https://golang.cafe/blog/golang-functional-options-pattern.html>
 - <https://www.youtube.com/watch?v=kESBAiTYMoQ>
+
+---
+
+Guidelines
+
+If you don't need order
+  - if you need validation
+    - use a builder or an options struct with a post validation function that returns a new type
+  - if you don't need validation
+    - If your function has less than 3 parameters
+      -  
+
+If you need order
+  - use a builder with multiple types where you can only call 1 function after the other, e.g. x.builder().a().b(), and not .b().a() because .b() doesn't exist on the return type of .builder(), and .a() doesn't exist on the return type of .b()

@@ -87,3 +87,10 @@ fn main() {
 // Learnings
 // - default function parameters can't be the result of a function call (easily)
 // - You can't spread ..Default::default() unless all fields implement default
+
+
+fn add(x: i32, y: i32) -> i32 {
+    let mut z = x;
+    z += y;
+    return x + y;
+}

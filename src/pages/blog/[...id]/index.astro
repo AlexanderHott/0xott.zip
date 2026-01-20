@@ -40,19 +40,17 @@ function slugifyStr(text: string) {
       class="prose dark:prose-invert mx-auto mt-8 max-w-3xl"
     >
       <div class="not-prose flex flex-col gap-2">
-        <button
+        <!-- <button
           class="flex cursor-pointer items-center gap-2"
           onclick="(() => (history.length === 1) ? window.location = '/' : history.back())()"
         >
           <LeftChevron />
           <span>Go back</span>
-        </button>
+        </button> -->
         <h1
           transition:name={slugifyStr(title)}
           class="post-title inline-block text-5xl font-black"
-        >
-          {title}
-        </h1>
+        >{title}</h1>
         <time
           class="text-sm text-gray-500"
           datetime={updatedAt?.toISOString() ?? createdAt.toISOString()}

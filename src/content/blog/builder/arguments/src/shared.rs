@@ -8,7 +8,6 @@ use std::{
 
 #[derive(Copy, Clone)]
 pub struct Ast;
-pub struct Module;
 
 pub struct TargetTriple(String);
 impl Default for TargetTriple {
