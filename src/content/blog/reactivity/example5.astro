@@ -1,0 +1,157 @@
+<div id="example5-app"></div>
+
+<script>
+  type Getter<T> = () => T;
+  type Setter<T> = (nextValue: T) => void;
+  type Signal = {
+    execute: () => void;
+    dependencies: Set<Set<Signal>>;
+  };
+
+  const context: Signal[] = [];
+
+  function subscribe(running: Signal, subscriptions: Set<Signal>) {
+    subscriptions.add(running);
+    running.dependencies.add(subscriptions);
+  }
+
+  function createSignal<T>(value: T): [Getter<T>, Setter<T>] {
+    const subscriptions: Set<Signal> = new Set();
+
+    const read = () => {
+      const running = context[context.length - 1];
+      if (running) subscribe(running, subscriptions);
+      return value;
+    };
+
+    const write = (nextValue: T) => {
+      value = nextValue;
+
+      for (const sub of [...subscriptions]) {
+        sub.execute();
+      }
+    };
+    return [read, write];
+  }
+
+  function cleanup(running: Signal) {
+    for (const dep of running.dependencies) {
+      dep.delete(running);
+    }
+    running.dependencies.clear();
+  }
+
+  function createEffect(fn: () => void) {
+    let running: Signal;
+
+    const execute = () => {
+      cleanup(running);
+      context.push(running);
+      try {
+        fn();
+      } finally {
+        context.pop();
+      }
+    };
+
+    running = {
+      execute,
+      dependencies: new Set(),
+    };
+
+    execute();
+  }
+
+  function createMemo<T>(fn: () => T) {
+    const [s, setS] = createSignal<T>(null as unknown as T);
+    createEffect(() => setS(fn()));
+    return s;
+  }
+
+  type ComponentChild =
+    | object
+    | string
+    | number
+    | bigint
+    | boolean
+    | null
+    | undefined;
+
+  // also commonly called `createElement`
+  function h(
+    tagName: keyof HTMLElementTagNameMap,
+    attributes: Record<string, unknown>,
+    ...children: ComponentChild[]
+  ) {
+    const element = document.createElement(tagName);
+    for (const [key, val] of Object.entries(attributes)) {
+      if (key.startsWith("on")) {
+        element.addEventListener(key.slice(2).toLowerCase(), val as any);
+      } else if (key === "className") {
+        element.className = String(val);
+      } else {
+        element.setAttribute(key, String(val));
+      }
+    }
+
+    children
+      ?.filter((child) => Boolean(child))
+      .forEach((child) => {
+        element.appendChild(
+          child instanceof Node
+            ? child
+            : document.createTextNode(String(child)),
+        );
+      });
+
+    return element;
+  }
+  function div(
+    attributes: Record<string, unknown>,
+    ...children: ComponentChild[]
+  ) {
+    return h("div", attributes, ...children);
+  }
+  function button(
+    attributes: Record<string, unknown>,
+    ...children: ComponentChild[]
+  ) {
+    return h("button", attributes, ...children);
+  }
+
+  const app = document.getElementById("example5-app");
+
+  function divide(a: number, b: number) {
+    return a / b;
+  }
+
+  const [n, setN] = createSignal(0);
+
+  function DivideComponent(b: number) {
+    const derived = createMemo(() => divide(n(), b));
+
+    const template = div({});
+    createEffect(
+      () => (template.innerHTML = `${n()} / ${b} = ${derived().toFixed(3)}`),
+    );
+    return template;
+  }
+
+  const nTemplate = div({});
+  createEffect(() => (nTemplate.innerHTML = `n = ${n()}`));
+
+  app.appendChild(
+    div(
+      {},
+      "signals sync",
+      nTemplate,
+      button({ onClick: () => setN(n() + 1) }, "increment"),
+      button({ onClick: () => setN(n() - 1) }, "decrement"),
+      DivideComponent(1),
+      DivideComponent(2),
+      DivideComponent(3),
+      DivideComponent(4),
+      DivideComponent(5),
+    ),
+  );
+</script>

@@ -1,0 +1,164 @@
+---
+createdAt: 2026-04-17T22:03:56.387Z
+title: "Porting"
+tags:
+  - programming languages
+  - language features
+description: "The art of rewriting code from one language to another."
+draft: true
+---
+
+{/* 
+# alternate title: breaking down ecosystem barriers
+
+# Outline
+
+- different languages and ecosystems have libraries that are pretty useful, but may not be available outside of the walled garden/ecosystem
+- sometimes those libraries are useful no matter what the language is, e.g. math, logging, data encoding/decoding (parsers, codecs)
+- its kinda easy to port if the library only relies on basic language features like `if` statements and `for` loops.
+  - typescript parser port to golang, 80% automated AST transform: https://github.com/microsoft/typescript-go
+  - metaprogramming / codegen
+- for some libraries, its enough to link to a native build in c/c++/rust, but sometimes its better to have the library in the same source langauge as the programs using it
+  - simpler build system / no ffi
+  - better debugging / perf tracing
+  - easier to understand and contribute to
+  - need more complex features than LCD language (c) has
+- if you need port a library that relies on custom language features that don't exist 1-for-1 in the target language, what can you do?
+  - understand the special language features that the source library uses
+  - be familiar with *all* the target language's full set of feature
+  - try to find "matching" features: rs`Drop` ts`using` py`context managers`, rs`task local storage` py`contextvars`, c`label + goto`
+  - sometimes the runtime / ecosystem has the feature instead of the language rs`task local storage` node`AsyncLocalStorage`
+  - sometimes you can mimic the feature with custom transforms / build scripts (custom ts syntax)
+  - make compromises on the original api / ergonomics
+  - 
+- examples
+  - tracing port from rust to typescript and python
+  - results to typescript and python
+  - solidjs to python
+
+- hypothetical
+  - porting anyhow to typescript
+*/}
+
+Picking the "right" language can be difficult, and switching languages can be painful, all because language x has a library that language y doesn't.
+TODO pick better examples that *could* be ported
+That could be python's numpy + pandas + matplotlib scientific/ML ecosystem, php's laravel, or C#'s ASP.NET or Unity.
+
+Maybe its not realistic for every library to exist in every language, but there are some solutions for making libraries available in other languages that each have their own tradeoffs. 
+
+Depending on the source and target language, you could include native libraries written in c/c++/rust by using FFI. The pros are you don't need to rewrite the logic of the library, but the cons are that you likely need a more complex build system and need to maintain the FFI glue and possible API layer to make it easier to use. 
+
+If the library uses mostly simple language features like `if` statements and `for` loops, you could use a transpiler to get most of the way there, and finish it up with some manual or LLM assisted effort. This is how the typescript compiler was ported from typescript to ~400k lines of golang. There are languages that specialize in being the source language to transpile to many different target languages, like [haxe](https://haxe.org/)
+
+The last case we come to is where the library uses some specialized features in the source language that don't exist 1-to-1 in the target language.
+
+
+
+One example that I missed in other languages was Rust's tracing library. It's "a scoped, structured logging and diagnostics system." <a href="https://tracing.rs/tracing/" target="_blank">^1</a>
+
+It lets you write logging code like 
+
+```rs
+#[instrument]
+pub fn my_function(my_arg: usize) {
+    // This event will be recorded inside a span named `my_function` with the
+    // field `my_arg`.
+    info!("inside my_function!");
+    // ...
+}
+// TODO make example better
+```
+
+which produces log statements that track *where* they are. This is very useful for async tasks where logs may not come in order. 
+
+```txt
+TODO
+```
+
+Some of the ergonomics and low-overhead of the tracing library relies on task local storage, the `Drop` trait, and macros, so how do you go about porting libraries that rely on specific language features?
+
+---
+
+## Porting Guidance
+
+### 1. understand the language features that the source library uses
+
+Understanding how the specific language feature works is critical before you move onto the next steps. If you didn't know how the "task local storage" feature worked in rust, how can you expect to replicate the functionality in another language?
+
+### 2. be familiar with *all* the target language's full set of feature
+
+Even if you have been using a language for a while, you could miss entire parts of language features, and you never know what will be useful. Generators, decorators, goto, meta-programming, operator overloading, RAII, and proxies are all examples of lesser-known language features that could help match the functionality of another language.
+
+### 3. try to find "matching" language features
+
+even if the features aren't 1-to-1, they may have similar use cases.
+
+Rust's `Drop` trait can be used for RAII, which also exists in typescript with the `using` keyword or in python with `with` statements. 
+
+The `#[instrument]` proc macro is being used like a decorator, which sort of exist in typescript, and does exist in python.
+
+### 4. try to find "matching" runtime / ecosystem features 
+
+Task local storage exists in python if you are using `asyncio`, but doesn't exist in typescript. There is a [tc39 proposal for `AsyncContext`](https://github.com/tc39/proposal-async-context), but it isn't stable. However, node does have `AsyncLocalStorage` api, which you could use if you are ok with limiting your library to nodejs.
+
+### 5. use a custom source transforms / build scripts
+
+If the language doesn't implement the feature, you could possibly add it yourself with some AST transforms via meta-programming or build plugins.
+
+- https://github.com/unjs/unctx
+- https://github.com/iliasbhal/simple-async-context
+
+### 6. make compromises on the original api / ergonomics
+
+Since I don't want the complexity of a custom build-time transforms, and I don't want consumers of the library to be required to use them either, I opted to not go with any of the AsyncContext ponyfills.
+
+
+---
+
+TODO https://web.archive.org/web/20260327023906/https://loggingsucks.com/
+
+
+
+
+
+e.g.
+
+```rust
+#[instrument]
+async fn do_the_thing(a: &str, b: usize) {
+  todo!();
+}
+```
+
+`#[instrument]` automatically creates a span for the duration of the function.
+
+If you follow the advice of "pushing `if`s up and `for`s down," then your function will have some early returns. 
+This gets annoying if you need to manually end the span, and also requires that none of your functions throw exceptions/bubble via the `?` operator.
+
+In typescript, it might look something like 
+
+
+```ts
+#[instrument]
+async function doTheThing(a: string, b: number) {
+  // ...
+}
+```
+
+If you really want the functionality of tracing, and you don't have proc macros, async local storage, or the `Drop` trait, what can you do?
+
+- AsyncContetx vs AsyncLocalStorage: if the language doesn't provide it, maybe the runtime (node) does
+- `#[instrument]` sort of looks like a decorator, which does exist in javascript
+  - manual decorators via 
+    ```ts
+    const myFunction = withSpan(function myFunction(span: Span, a: string, b: number) {
+
+    });
+    ```
+- proc macros via build-time code transformations.
+- newer versions of javascript introduced the `using` keyword for resource management, which is what we want.
+
+in python, you have decorators and `with` statements.
+
+
+TODO sometimes the target language is more expressive than the source language

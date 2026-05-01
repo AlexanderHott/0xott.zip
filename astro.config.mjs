@@ -9,6 +9,10 @@ import rehypeKatex from "rehype-katex";
 
 import expressiveCode from "astro-expressive-code";
 
+import react from "@astrojs/react";
+
+import solidJs from "@astrojs/solid-js";
+
 // https://astro.build/config
 export default defineConfig({
   site: "https://0xott.zip",
@@ -24,9 +28,12 @@ export default defineConfig({
       },
     }),
     mdx(),
+    react({ include: "**/react/*" }),
+    solidJs({ include: "**/solid/*" }),
   ],
   markdown: {
     remarkPlugins: [remarkMath],
     rehypePlugins: [rehypeKatex],
   },
 });
+

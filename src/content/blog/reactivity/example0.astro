@@ -1,0 +1,16 @@
+<div id="example0-count">0</div>
+<button type="button" id="example0-increment">Increment</button>
+
+<script>
+  const countElement = document.getElementById("example0-count");
+  const buttonElement = document.getElementById("example0-increment");
+
+  let count = 0;
+
+  if (countElement !== null && buttonElement !== null) {
+    buttonElement.addEventListener("click", () => {
+      count += 1;
+      countElement.innerHTML = `${count}`;
+    });
+  }
+</script>

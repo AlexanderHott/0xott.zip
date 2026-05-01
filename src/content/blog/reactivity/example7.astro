@@ -1,0 +1,456 @@
+<div id="example7-app"></div>
+
+<script>
+  type Component<P extends Record<string, any> = any> = (props: P) => VNode;
+
+  type VNode =
+    | {
+        kind: "element";
+        tag: keyof HTMLElementTagNameMap;
+        props: Record<string, any>;
+        children: VNode[];
+      }
+    | {
+        kind: "text";
+        text: string;
+      }
+    | {
+        kind: "component";
+        component: Component;
+        props: Record<string, any>;
+        _fiber?: Fiber;
+      };
+
+  function h(
+    tag: keyof HTMLElementTagNameMap | Component,
+    props: Record<string, unknown> | null,
+    ...children: (VNode | string)[]
+  ) {
+    const normalized: VNode[] = children.map((child) =>
+      typeof child === "string"
+        ? { kind: "text" as const, text: child }
+        : child,
+    );
+
+    if (typeof tag === "function") {
+      return {
+        kind: "component",
+        component: tag,
+        props: { ...(props ?? {}), children: normalized },
+      } satisfies VNode;
+    }
+
+    return {
+      kind: "element",
+      tag,
+      props: props ?? {},
+      children: normalized,
+    } satisfies VNode;
+  }
+
+  // ---- Fiber (component instance) & Hooks ----
+
+  interface Fiber {
+    component: Component;
+    props: Record<string, any>;
+    hooks: any[];
+    rendered: VNode; // last rendered output
+  }
+
+  let currentFiber: Fiber | null = null;
+  let hookIndex = 0;
+  let scheduleRerender: (() => void) | null = null;
+
+  function renderFiber(fiber: Fiber): VNode {
+    currentFiber = fiber;
+    hookIndex = 0;
+    const rendered = fiber.component(fiber.props);
+    currentFiber = null;
+    return rendered;
+  }
+
+  // ---- useState ----
+
+  function useState<T>(initial: T): [T, (value: T | ((prev: T) => T)) => void] {
+    const fiber = currentFiber!;
+    const idx = hookIndex++;
+
+    // Initialize on first render
+    if (fiber.hooks.length <= idx) {
+      fiber.hooks.push(initial);
+    }
+
+    const setState = (value: T | ((prev: T) => T)) => {
+      const current = fiber.hooks[idx];
+      const next =
+        typeof value === "function"
+          ? (value as (prev: T) => T)(current)
+          : value;
+      if (!Object.is(current, next)) {
+        fiber.hooks[idx] = next;
+        scheduleRerender?.();
+      }
+    };
+
+    return [fiber.hooks[idx], setState];
+  }
+
+  // ---- useEffect ----
+
+  interface EffectHook {
+    callback: () => void | (() => void);
+    deps: unknown[] | undefined;
+    cleanup?: () => void;
+    pending: boolean;
+  }
+
+  let pendingEffects: EffectHook[] = [];
+
+  function useEffect(callback: () => void | (() => void), deps?: unknown[]) {
+    const fiber = currentFiber!;
+    const idx = hookIndex++;
+
+    if (fiber.hooks.length <= idx) {
+      // First render: schedule the effect
+      const effect: EffectHook = { callback, deps, pending: true };
+      fiber.hooks.push(effect);
+      pendingEffects.push(effect);
+    } else {
+      const effect = fiber.hooks[idx] as EffectHook;
+      const depsChanged =
+        deps === undefined ||
+        effect.deps === undefined ||
+        deps.length !== effect.deps.length ||
+        deps.some((d, i) => !Object.is(d, effect.deps![i]));
+
+      if (depsChanged) {
+        effect.callback = callback;
+        effect.deps = deps;
+        effect.pending = true;
+        pendingEffects.push(effect);
+      }
+    }
+  }
+
+  function flushEffects() {
+    const effects = pendingEffects;
+    pendingEffects = [];
+    for (const effect of effects) {
+      if (effect.pending) {
+        effect.cleanup?.();
+        const result = effect.callback();
+        effect.cleanup = typeof result === "function" ? result : undefined;
+        effect.pending = false;
+      }
+    }
+  }
+
+  // ---- Diffing ----
+
+  type Op =
+    | { op: "noop" }
+    | { op: "create"; vnode: VNode }
+    | { op: "remove" }
+    | { op: "replace"; vnode: VNode }
+    | {
+        op: "modify";
+        removeProps: string[];
+        addProps: Record<string, unknown>;
+        children: Op[];
+      };
+
+  function diffOne(oldVNode: VNode, newVNode: VNode): Op {
+    // Different kinds → replace
+    if (oldVNode.kind !== newVNode.kind) {
+      return { op: "replace", vnode: newVNode };
+    }
+
+    // Both text
+    if (oldVNode.kind === "text" && newVNode.kind === "text") {
+      if (oldVNode.text !== newVNode.text) {
+        return { op: "replace", vnode: newVNode };
+      }
+      return { op: "noop" };
+    }
+
+    // Both component
+    if (oldVNode.kind === "component" && newVNode.kind === "component") {
+      if (oldVNode.component !== newVNode.component) {
+        // Different component function → replace entirely
+        return { op: "replace", vnode: newVNode };
+      }
+
+      // Same component: reuse fiber, re-render, diff rendered output
+      const fiber = oldVNode._fiber!;
+      fiber.props = newVNode.props;
+
+      const newRendered = renderFiber(fiber);
+      const childOp = diffOne(fiber.rendered, newRendered);
+      fiber.rendered = newRendered;
+      newVNode._fiber = fiber; // transfer fiber to new VNode
+
+      return childOp;
+    }
+
+    // Both element
+    if (oldVNode.kind === "element" && newVNode.kind === "element") {
+      if (oldVNode.tag !== newVNode.tag) {
+        return { op: "replace", vnode: newVNode };
+      }
+
+      // Props to remove: in old but not in new
+      const remove: string[] = [];
+      for (const prop of Object.keys(oldVNode.props)) {
+        if (!(prop in newVNode.props)) {
+          remove.push(prop);
+        }
+      }
+
+      // Props to add/update: in new where value differs
+      const add: Record<string, unknown> = {};
+      for (const [prop, val] of Object.entries(newVNode.props)) {
+        if (oldVNode.props[prop] !== val) {
+          add[prop] = val;
+        }
+      }
+
+      const children = diffList(oldVNode.children, newVNode.children);
+
+      return {
+        op: "modify",
+        addProps: add,
+        removeProps: remove,
+        children,
+      };
+    }
+
+    return { op: "replace", vnode: newVNode };
+  }
+
+  function diffList(oldList: VNode[], newList: VNode[]): Op[] {
+    const len = Math.max(oldList.length, newList.length);
+    const diffs: Op[] = [];
+    for (let i = 0; i < len; ++i) {
+      if (oldList[i] === undefined) {
+        diffs.push({ op: "create", vnode: newList[i] });
+      } else if (newList[i] === undefined) {
+        diffs.push({ op: "remove" });
+      } else {
+        diffs.push(diffOne(oldList[i], newList[i]));
+      }
+    }
+    return diffs;
+  }
+
+  // ---- DOM operations ----
+
+  function applyProps(element: Element, props: Record<string, unknown>) {
+    for (const [key, val] of Object.entries(props)) {
+      if (key === "className") {
+        element.className = String(val);
+      } else if (key.startsWith("on")) {
+        const event = key.slice(2).toLowerCase();
+        // Remove old listener if one exists (handles updates)
+        const ui = (element as any)._ui;
+        if (ui?.[event]) {
+          element.removeEventListener(event, ui[event]);
+        }
+        element.addEventListener(event, val as any);
+        (element as any)._ui ??= {};
+        (element as any)._ui[event] = val;
+      } else {
+        element.setAttribute(key, String(val));
+      }
+    }
+  }
+
+  function unapplyProps(element: Element, props: string[]) {
+    for (const key of props) {
+      if (key.startsWith("on")) {
+        const event = key.slice(2).toLowerCase();
+        const ui = (element as any)._ui;
+        if (ui?.[event]) {
+          element.removeEventListener(event, ui[event]);
+          delete ui[event];
+        }
+      } else {
+        element.removeAttribute(key);
+      }
+    }
+  }
+
+  function create(vnode: VNode): Node {
+    if (vnode.kind === "text") {
+      return document.createTextNode(vnode.text);
+    }
+
+    if (vnode.kind === "component") {
+      // Create a new fiber for this component instance
+      const fiber: Fiber = {
+        component: vnode.component,
+        props: vnode.props,
+        hooks: [],
+        rendered: null!,
+      };
+
+      fiber.rendered = renderFiber(fiber);
+      vnode._fiber = fiber;
+
+      // A component produces the DOM of its rendered output
+      return create(fiber.rendered);
+    }
+
+    // Element node
+    const element = document.createElement(vnode.tag);
+    applyProps(element, vnode.props);
+    for (const child of vnode.children) {
+      element.appendChild(create(child));
+    }
+    return element;
+  }
+
+  function applyChildren(parent: Node, childrenDiff: Op[]) {
+    const children = Array.from(parent.childNodes);
+
+    for (let i = 0; i < childrenDiff.length; ++i) {
+      const diff = childrenDiff[i];
+      switch (diff.op) {
+        case "create": {
+          parent.appendChild(create(diff.vnode));
+          break;
+        }
+        case "remove": {
+          children[i].remove();
+          break;
+        }
+        case "modify": {
+          const child = children[i] as Element;
+          unapplyProps(child, diff.removeProps);
+          applyProps(child, diff.addProps);
+          applyChildren(child, diff.children);
+          break;
+        }
+        case "replace": {
+          const newChild = create(diff.vnode);
+          children[i].replaceWith(newChild);
+          break;
+        }
+        case "noop": {
+          break;
+        }
+        default: {
+          const _unreachable: never = diff;
+        }
+      }
+    }
+  }
+
+  function applyOne(node: Node, diff: Op): Node {
+    switch (diff.op) {
+      case "noop":
+        return node;
+      case "replace": {
+        const newNode = create(diff.vnode);
+        (node as ChildNode).replaceWith(newNode);
+        return newNode;
+      }
+      case "modify": {
+        const el = node as Element;
+        unapplyProps(el, diff.removeProps);
+        applyProps(el, diff.addProps);
+        applyChildren(el, diff.children);
+        return node;
+      }
+      case "create":
+      case "remove":
+        throw new Error(`Cannot applyOne with op "${diff.op}"`);
+      default: {
+        const _unreachable: never = diff;
+        throw _unreachable;
+      }
+    }
+  }
+
+  // ---- render() — the entry point (replaces init()) ----
+
+  function render(
+    root: Element,
+    component: Component,
+    props?: Record<string, any>,
+  ) {
+    let oldVNode: VNode | null = null;
+    let updateScheduled = false;
+
+    function draw() {
+      const newVNode: VNode = {
+        kind: "component",
+        component,
+        props: props ?? {},
+      };
+
+      if (oldVNode === null) {
+        // Initial mount
+        root.appendChild(create(newVNode));
+      } else {
+        // Re-render: diff old tree against new tree
+        const diff = diffOne(oldVNode, newVNode);
+        if (diff.op !== "noop") {
+          applyOne(root.firstChild!, diff);
+        }
+      }
+
+      oldVNode = newVNode;
+      flushEffects();
+    }
+
+    // setState calls this to schedule a re-render on the next frame
+    scheduleRerender = () => {
+      if (!updateScheduled) {
+        updateScheduled = true;
+        requestAnimationFrame(() => {
+          updateScheduled = false;
+          draw();
+        });
+      }
+    };
+
+    draw();
+  }
+
+  // ============================================================
+  // App — counter using components and hooks
+  // ============================================================
+
+  function Button(props: { onClick: () => void; children?: VNode[] }) {
+    return h("button", { onClick: props.onClick }, ...(props.children ?? []));
+  }
+
+  function Counter() {
+    const [count, setCount] = useState(0);
+
+    useEffect(() => {
+      console.log("Counter mounted / count changed:", count);
+    }, [count]);
+
+    return h(
+      "div",
+      {},
+      h("p", {}, `Counter: ${count}`),
+      h(Button, { onClick: () => setCount((c) => c + 1) }, "increment"),
+      h(Button, { onClick: () => setCount((c) => c - 2) }, "decrement"),
+    );
+  }
+
+  function App() {
+    return h(
+      "div",
+      {},
+      h("p", {}, "vDOM sync (React-style hooks)"),
+      h(Counter, {}),
+    );
+  }
+
+  // Mount the app
+  const root = document.getElementById("example7-app")!;
+  render(root, App);
+</script>

@@ -1,0 +1,29 @@
+<div id="example1-count">0</div>
+<button type="button" id="example1-increment">Increment</button>
+
+<script>
+  function $(id: string) {
+    const element = document.getElementById(id);
+    if (!element) {
+      throw new Error(`Could not find element with id '${id}'`);
+    }
+
+    return {
+      html(text: string) {
+        element.innerHTML = text;
+      },
+      on<K extends keyof HTMLElementEventMap>(
+        type: K,
+        listener: (ev: HTMLElementEventMap[K]) => any,
+      ) {
+        element.addEventListener(type, listener);
+      },
+    };
+  }
+
+  let count = 0;
+  $("example1-increment").on("click", () => {
+    count += 1;
+    $("example1-count").html(`${count}`);
+  });
+</script>

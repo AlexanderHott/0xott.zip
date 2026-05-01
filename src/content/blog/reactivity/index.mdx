@@ -1,0 +1,125 @@
+---
+createdAt: 2026-03-15T04:45:28.269Z
+title: "Reactive Programming from the Ground Up"
+tags:
+  - web
+  - react
+  - solid
+  - api-design
+description: >
+  A solid backbone and effective overvue of reactive programming, from the 
+  sharp angular edges, to the delicate, leptos, svelte bits. A lit journey that
+  will spark millions of embers for your own exploration. Marko?
+draft: true
+---
+
+import { Code } from "astro-expressive-code/components";
+
+import Example0 from "./example0.astro";
+import example0Code from "./example0.astro?raw";
+
+import Example1 from "./example1.astro";
+import Example2 from "./example2.astro";
+import Example3 from "./example3.astro";
+import Example4 from "./example4.astro";
+import Example5 from "./example5.astro";
+import Example6 from "./example6.astro";
+import Example7 from "./example7.astro";
+import Example8 from "./example8.astro";
+
+import { ReactExample1 } from "./react/example1.tsx"
+import { ReactExample2 } from "./react/example2.tsx"
+import { ReactExample3 } from "./react/example3.tsx"
+import { ReactExample4 } from "./react/example4.tsx"
+
+import { SolidExample1 } from "./solid/example1.tsx"
+import { SolidExample2 } from "./solid/example2.tsx"
+
+Reactive programming is ...
+
+The browser's API for manipulating elements dynamically is imperative.
+
+<Example0 />
+<Code code={example0Code} lang="html" />
+
+This can get messy. Really messy.
+
+---
+
+<Example1 />
+
+---
+
+<Example2 />
+
+---
+
+<Example3 />
+
+---
+
+<Example4 />
+
+---
+
+<Example5 />
+
+---
+
+<Example7 />
+
+---
+
+
+## Async
+
+---
+
+<Example6 />
+
+---
+
+<Example8 />
+
+
+## React
+
+<ReactExample1 client:load/>
+
+---
+
+<ReactExample2 client:load/>
+
+---
+
+<ReactExample3 client:load/>
+
+---
+
+<ReactExample4 client:load/>
+
+---
+
+## Solid 
+
+<SolidExample1 client:only="solid"/>
+
+---
+
+<SolidExample2 client:only="solid"/>
+
+---
+
+
+- [x] https://lazamar.github.io/virtual-dom/
+- [x] https://old.million.dev/blog/virtual-dom
+- [x] https://krausest.github.io/js-framework-benchmark/
+
+- [x] https://www.youtube.com/watch?v=tSO_tdnYprM
+- [x] https://www.youtube.com/watch?v=B_2E96URooA
+- [ ] https://github.com/rickhanlonii/async-react
+
+- [ ] https://lyra.horse/x86css/
+
+- [ ] https://overreacted.io/
+- [ ] https://www.columkelly.com/blog/use-optimistic

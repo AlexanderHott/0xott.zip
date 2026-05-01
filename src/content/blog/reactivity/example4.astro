@@ -1,0 +1,304 @@
+<div id="example4-app"></div>
+
+<script>
+  type VNode =
+    | {
+        tag: keyof HTMLElementTagNameMap;
+        props: Record<string, any>;
+        children: VNode[];
+      }
+    | {
+        tag: "#text";
+        text: string;
+      };
+
+  function h(
+    tag: keyof HTMLElementTagNameMap,
+    props: Record<string, unknown> | null,
+    ...children: (VNode | string)[]
+  ) {
+    return {
+      tag,
+      props: props ?? {},
+      children: children.map((child) =>
+        typeof child === "string"
+          ? { tag: "#text" as const, text: child }
+          : child,
+      ),
+    };
+  }
+
+  type Op =
+    | { op: "noop" }
+    | { op: "create"; vnode: VNode }
+    | { op: "remove" }
+    | { op: "replace"; vnode: VNode }
+    | {
+        op: "modify";
+        removeProps: string[];
+        addProps: Record<string, unknown>;
+        children: Op[];
+      };
+
+  function diffOne(oldVNode: VNode, newVNode: VNode) {
+    // different html tags: replace entire node
+    if (oldVNode.tag !== newVNode.tag) {
+      return { op: "replace", vnode: newVNode } satisfies Op;
+    }
+
+    // both text nodes: update text
+    const oldVnodeTag = oldVNode.tag;
+    const newVnodeTag = newVNode.tag;
+    if (oldVnodeTag === "#text" && newVnodeTag === "#text") {
+      if (oldVNode.text !== newVNode.text) {
+        return { op: "replace", vnode: newVNode } satisfies Op;
+      }
+      return { op: "noop" } satisfies Op;
+    }
+
+    if (oldVnodeTag === "#text" || newVnodeTag === "#text") {
+      throw new Error("huh");
+    }
+
+    // both the same non-text node: update props
+    const remove: string[] = [];
+    for (const prop of Object.keys(oldVNode.props)) {
+      if (!(prop in newVNode.props)) {
+        remove.push(prop);
+      }
+    }
+
+    const add: Record<string, unknown> = {};
+    for (const [prop, val] of Object.entries(newVNode.props)) {
+      if (oldVNode[prop] !== newVNode[prop]) {
+        add[prop] = val;
+      }
+    }
+
+    const children = diffList(oldVNode.children, newVNode.children);
+
+    return {
+      op: "modify",
+      addProps: add,
+      removeProps: remove,
+      children,
+    } satisfies Op;
+  }
+
+  function diffList(oldList: VNode[], newList: VNode[]) {
+    const len = Math.max(oldList.length, newList.length);
+    const diffs: Op[] = [];
+    for (let i = 0; i < len; ++i) {
+      if (oldList[i] === undefined) {
+        diffs.push({ op: "create", vnode: newList[i] });
+      } else if (newList[i] === undefined) {
+        diffs.push({ op: "remove" });
+      } else {
+        diffs.push(diffOne(oldList[i], newList[i]));
+      }
+    }
+
+    return diffs;
+  }
+
+  function applyProps(element: Element, props: Record<string, unknown>) {
+    for (const [key, val] of Object.entries(props)) {
+      if (key === "className") {
+        element.className = String(val);
+      } else if (key.startsWith("on")) {
+        const event = key.slice(2).toLowerCase();
+        element.addEventListener(event, val as any);
+        element._ui ??= {};
+        element._ui[event] = val;
+      } else {
+        element.setAttribute(key, String(val));
+      }
+    }
+  }
+
+  function unapplyProps(element: Element, props: string[]) {
+    for (const key of props) {
+      if (key.startsWith("on")) {
+        const event = key.slice(2).toLowerCase();
+        element.removeEventListener(event, element._ui[event]);
+      } else {
+        element.removeAttribute(key);
+      }
+    }
+  }
+
+  function apply(element: Node, childrenDiff: Op[]) {
+    const children = Array.from(element.childNodes);
+
+    for (let i = 0; i < childrenDiff.length; ++i) {
+      const diff = childrenDiff[i];
+      switch (diff.op) {
+        case "create": {
+          element.appendChild(create(diff.vnode));
+          break;
+        }
+        case "remove": {
+          children[i].remove();
+          break;
+        }
+        case "modify": {
+          modify(children[i], diff);
+          break;
+        }
+        case "replace": {
+          const child = create(diff.vnode);
+          children[i].replaceWith(child);
+          break;
+        }
+        case "noop": {
+          break;
+        }
+        default: {
+          const _unreachable: never = diff;
+        }
+      }
+    }
+  }
+
+  function create(vNode: VNode) {
+    if (vNode.tag === "#text") {
+      return document.createTextNode(vNode.text);
+    }
+
+    const element = document.createElement(vNode.tag);
+
+    applyProps(element, vNode.props);
+
+    for (const child of vNode.children) {
+      element.appendChild(create(child));
+    }
+
+    return element;
+  }
+
+  function modify(element: Element, diff: Op & { op: "modify" }) {
+    unapplyProps(element, diff.removeProps);
+    applyProps(element, diff.addProps);
+
+    apply(element, diff.children);
+  }
+
+  //  
+
+  function init(
+    root: Element,
+    initialState: State,
+    update: (state: State, msg: Message, enqueue: Enqueue) => State,
+    view: (state: State, enqueue: Enqueue) => VNode[],
+  ) {
+    let state = initialState; // client application state
+    let nodes: VNode[] = []; // virtual DOM nodes
+    let queue: Message[] = []; // msg queue
+
+    function enqueue(msg: Message) {
+      queue.push(msg);
+    }
+
+    // draws the current state
+    function draw() {
+      let newNodes = view(state, enqueue);
+      const diff = diffList(nodes, newNodes);
+      apply(root, diff);
+      nodes = newNodes;
+    }
+
+    function updateState() {
+      if (queue.length > 0) {
+        let msgs = queue;
+        // replace queue with an empty array so that we don't process
+        // newly queued messages on this round.
+        queue = [];
+
+        for (const msg of msgs) {
+          state = update(state, msg, enqueue);
+        }
+
+        draw();
+      }
+
+      // schedule next round of state updates
+      window.requestAnimationFrame(updateState);
+    }
+
+    draw(); // draw initial state
+    updateState(); // kick-off state update cycle
+
+    return { enqueue };
+  }
+
+  type Enqueue = (msg: Message) => void;
+
+  // app
+
+  const root = document.getElementById("example4-app")!;
+
+  interface State {
+    counter: number;
+  }
+  type Message =
+    | {
+        type: "inc";
+        value: number;
+      }
+    | {
+        type: "dec";
+        value: number;
+      };
+
+  function view(state: State, enqueue: Enqueue) {
+    return [
+      h("p", {}, "vDOM sync"),
+      h("p", {}, `Counter: ${state.counter}`),
+      h(
+        "button",
+        {
+          onClick: () => {
+            console.log("click");
+            enqueue({ type: "inc", value: 1 });
+          },
+        },
+        "increment",
+      ),
+      h(
+        "button",
+        {
+          onClick: () => {
+            console.log("click");
+            enqueue({ type: "dec", value: 2 });
+          },
+        },
+        "decrement",
+      ),
+    ];
+  }
+
+  function update(state: State, msg: Message, enqueue: Enqueue) {
+    switch (msg.type) {
+      case "inc": {
+        return { counter: state.counter + msg.value };
+      }
+      case "dec": {
+        return { counter: state.counter - msg.value };
+      }
+      default:
+        return state;
+    }
+  }
+
+  const initialState = { counter: 0 };
+
+  // Start application
+  const { enqueue } = init(root, initialState, update, view);
+
+  // Increase the counter by one every second.
+  // setInterval(() => enqueue({ type: "inc", value: 1 }), 1000);
+
+  function divide(a: number, b: number) {
+    return a / b;
+  }
+</script>

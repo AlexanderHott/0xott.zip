@@ -1,0 +1,80 @@
+<div id="example3-app"></div>
+
+<script>
+  type ComponentChild =
+    | object
+    | string
+    | number
+    | bigint
+    | boolean
+    | null
+    | undefined;
+
+  // also commonly called `createElement`
+  function h(
+    tagName: keyof HTMLElementTagNameMap,
+    attributes: Record<string, unknown>,
+    ...children: ComponentChild[]
+  ) {
+    const element = document.createElement(tagName);
+    for (const [key, val] of Object.entries(attributes)) {
+      if (key.startsWith("on")) {
+        element.addEventListener(key.slice(2).toLowerCase(), val as any);
+      } else if (key === "className") {
+        element.className = String(val);
+      } else {
+        element.setAttribute(key, String(val));
+      }
+    }
+
+    children
+      ?.filter((child) => Boolean(child))
+      .forEach((child) => {
+        element.appendChild(
+          child instanceof Node
+            ? child
+            : document.createTextNode(String(child)),
+        );
+      });
+
+    return element;
+  }
+
+  function divide(a: number, b: number) {
+    return a / b;
+  }
+
+  let n = 1;
+  const root = document.getElementById("example3-app")!;
+  let prev: HTMLElement | undefined = undefined;
+
+  function update() {
+    const app = h(
+      "div",
+      {},
+      h("div", {}, `n = ${n}`),
+      h(
+        "button",
+        {
+          onClick: () => {
+            n += 1;
+            update();
+          },
+        },
+        "increment",
+      ),
+      ...Array.from({ length: 5 }, (_, i) =>
+        h("div", {}, `${n} / ${i + 1} = ${divide(n, i + 1).toFixed(3)}`),
+      ),
+    );
+
+    if (prev) {
+      root.replaceChild(app, prev);
+    } else {
+      root.appendChild(app);
+    }
+    prev = app;
+  }
+
+  update();
+</script>
