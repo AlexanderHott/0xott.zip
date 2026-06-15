@@ -1,0 +1,159 @@
+---
+createdAt: 2026-06-14T23:40:38.911Z
+title: "git 101"
+tags:
+  - git
+description: "Learn what git is, how it works, and how to use it."
+draft: true
+---
+import { Image } from 'astro:assets';
+
+import notDirected from "./02-not-directed.svg"
+import notAcyclic from "./03-not-acyclic.svg" 
+
+<div className="place-items-center">
+    <img
+        src="https://imgs.xkcd.com/comics/git.png" 
+        title="If that doesn't fix it, git.txt contains the phone number of a friend of mine who understands git. Just wait through a few minutes of 'It's really pretty simple, just think of branches as...' and eventually you'll learn the commands that will fix everything." 
+        alt="Git in a nutshell"
+    />
+</div>
+
+## What is `git`?
+
+`git` is a set of tool that lets you build a *distributed version control system*.
+
+It makes more sence when read backwards.
+It lets you build a *system*, a way of doing things.
+Its built for *version control*, a way to maintain a history of something, usuall code.
+And its *distributed*, its meant to work accross multiple people / computers.
+
+Distributed version control systems have many uses, including viewing old
+snapshots of your content, and tracking change you content concurrently and in
+parallel. Being a sort of database, they can also answer questions about the
+history of your content, like, "who wrote this", "who was the last person to 
+change this line of code, and why", "what did this file look like last week", 
+and more complex things like, "when was this bug introduced", "what changed 
+between these two releases", "when was this exact string added or removed".
+
+
+## Why `git`?
+
+`git` was created in 2005 by Linus Torvalds because their free license to their
+current distributed version control system, BitKeeper, was revoked. None of the
+existing solutions met the needs of the Linux Kernel, so he wrote his own.
+Since then, the project has been maintained by Junio Hamano.
+
+Today, `git` is popular because its free, fast, and flexible. It supports
+simple single-person projects to the complex workflows at large companies. Much
+of the world's code lives on GitHub, which uses `git` as the version control
+system. GitHub's pull request workflow is the backbone of modern software
+collaboration, so `git` became the defacto default.
+
+## How does `git` work?
+
+`git`'s core data model is quite simple, made of up of two classes of things: 
+objects and refs. Even though it's simple, its still very useful to understand when learning about the more 
+complex features and workflows that it enables.
+
+### `git`'s core data model
+
+At its core, `git` tracks files and folders. It keeps track of a root folder,
+and everything inside of it. In `git`, files are called *blobs*, and folders are
+called *trees*.
+
+In pseudocode, that might look like
+
+```typescript
+type blob = list<bytes>
+
+type tree = map<string, blob | tree> // name -> file/folder
+```
+
+Lets take a look at an example root tree
+
+```
+python_project/   (root tree) 
+├── src/          (tree) 
+│   └──  main.py  (blob)
+└── README.md     (blob) 
+```
+
+`git` tracks history by tracking what I'm going to call *snapshots* of the root
+tree. These snapshots, along with some extra metadata, are the *versions* of
+your content that `git` tracks. It turns out that along side the snapshot of the
+content, its also useful to keep track of who made the snapshot, when it was
+created, a short message about the changes made to it, and which previous
+snapshots this version is based on. Together, this forms a *commit*.
+
+```typescript
+type commit = {
+    snapshot: tree;
+    created_at: Date;
+    message: string;
+    author: string;
+    parents: list<commit>;
+}
+```
+
+All together, blobs, trees, and commits are *objectcs*. Objects in git are 
+identified with a sha1 hash, a fingerprint, of their contents. Git keeps track of
+all these objects in a mapping from object hash to object. These objects are 
+immutable, they cannot change once they are created.
+
+```typescript
+type object = blob | tree | commit
+
+const objects: map<string, object> // object hash -> object
+```
+
+These objects can be reffered to by their hashes, but theres another thing in `git`'s data model called a *ref*.
+A ref is a reference or pointer, to an object. 
+
+```typescript
+const refs: map<string, string> // name -> object hash
+```
+
+Unlike objects, refs are mutable, meaning you can change what they point to.
+
+*Branches* are refs that point to commits. 
+
+When a branch points to a commit, we really think of the branch as that commit and all its parents, all their parents, and so on.
+
+
+### Application
+
+Lets see this in practice...
+
+
+
+{/*Commits link together to whats mathematically called a *graph*. This isn't
+a plot of $y = x$, its a bunch of points and lines. The points being commits,
+and the lines being relationships between the commits. 
+
+
+<div className="place-items-center">
+    ![An example graph](./01-graphsvg.svg)
+</div>
+
+Its actually a special type of graph called a *directed acyclic graph*. This means that the lines
+connecting the commits have a direction, and there are no cycles, or loops, in
+the graph.
+
+The direction of the arrows mean that "A is a parent of B", and "B is a child of A".
+
+<div className="place-items-center">
+    <Image src={notDirected} alt="A non-directed graph" />
+    <Image src={notAcyclic} alt="A cyclic graph" />
+</div> */}
+
+
+
+## References
+
+- MIT's The Missing Semester: [https://missing.csail.mit.edu/2026/version-control/](https://missing.csail.mit.edu/2026/version-control/)
+- boot.dev: [https://www.boot.dev/courses/learn-git](https://www.boot.dev/courses/learn-git)
+- [https://git-scm.com/](https://git-scm.com/)
+- [https://git-scm.com/book/en/v2/Getting-Started-About-Version-Control](https://git-scm.com/book/en/v2/Getting-Started-About-Version-Control)
+- Pro Git: [https://git-scm.com/book/en/v2](https://git-scm.com/book/en/v2)
+- Wikipedia: [https://en.wikipedia.org/wiki/Git](https://en.wikipedia.org/wiki/Git)
