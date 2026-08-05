@@ -168,3 +168,73 @@
     @apply bg-primary;
   }
 }
+
+/* Adapted from Astro Starlight's MIT-licensed disclosure styles:
+ * https://github.com/withastro/starlight/blob/main/packages/starlight/style/markdown.css
+ */
+@layer components {
+  .prose details:not(:where(.not-prose, .not-prose *)) {
+    --details-border-color: var(--border);
+    --details-border-color-hover: var(--primary);
+
+    border-inline-start: 2px solid var(--details-border-color);
+    padding-inline-start: 1rem;
+  }
+
+  .prose details:not([open]):hover:not(:where(.not-prose, .not-prose *)),
+  .prose details:has(> summary:hover):not(:where(.not-prose, .not-prose *)) {
+    border-color: var(--details-border-color-hover);
+  }
+
+  .prose summary:not(:where(.not-prose, .not-prose *)) {
+    display: block;
+    margin-inline-start: -0.5rem;
+    padding-inline-start: 0.5rem;
+    color: var(--foreground);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .prose details[open] > summary:not(:where(.not-prose, .not-prose *)) {
+    margin-bottom: 1rem;
+  }
+
+  .prose summary:not(:where(.not-prose, .not-prose *))::marker,
+  .prose summary:not(:where(.not-prose, .not-prose *))::-webkit-details-marker {
+    display: none;
+  }
+
+  .prose summary:not(:where(.not-prose, .not-prose *))::before {
+    --details-marker-size: 1.25rem;
+
+    display: inline-block;
+    width: var(--details-marker-size);
+    height: var(--details-marker-size);
+    margin-inline: calc((var(--details-marker-size) / 4) * -1) 0.25rem;
+    vertical-align: middle;
+    background-color: currentColor;
+    content: "";
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M14.8 11.3 10.6 7a1 1 0 1 0-1.4 1.5l3.5 3.5-3.5 3.5a1 1 0 0 0 0 1.4 1 1 0 0 0 .7.3 1 1 0 0 0 .7-.3l4.2-4.2a1 1 0 0 0 0-1.4Z'/%3E%3C/svg%3E%0A");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M14.8 11.3 10.6 7a1 1 0 1 0-1.4 1.5l3.5 3.5-3.5 3.5a1 1 0 0 0 0 1.4 1 1 0 0 0 .7.3 1 1 0 0 0 .7-.3l4.2-4.2a1 1 0 0 0 0-1.4Z'/%3E%3C/svg%3E%0A");
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .prose summary:not(:where(.not-prose, .not-prose *))::before {
+      transition: transform 0.2s ease-in-out;
+    }
+  }
+
+  .prose details[open] > summary:not(:where(.not-prose, .not-prose *))::before {
+    transform: rotateZ(90deg);
+  }
+
+  [dir="rtl"] .prose summary:not(:where(.not-prose, .not-prose *))::before {
+    transform: rotateZ(180deg);
+  }
+
+  .prose summary:not(:where(.not-prose, .not-prose *)) p:only-child {
+    display: inline;
+  }
+}
