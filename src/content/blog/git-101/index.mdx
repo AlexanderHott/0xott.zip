@@ -1,159 +1,1084 @@
 ---
 createdAt: 2026-06-14T23:40:38.911Z
-title: "git 101"
+title: "Git 101"
 tags:
   - git
-description: "Learn what git is, how it works, and how to use it."
+description: "Learn what Git is, how it works, and how to use it."
 draft: true
 ---
-import { Image } from 'astro:assets';
 
-import notDirected from "./02-not-directed.svg"
-import notAcyclic from "./03-not-acyclic.svg" 
+TODO: shell aliases
+TODO: add a Git configuration section covering `user.name`, `user.email`, and
+`init.defaultBranch`.
 
-<div className="place-items-center">
-    <img
-        src="https://imgs.xkcd.com/comics/git.png" 
-        title="If that doesn't fix it, git.txt contains the phone number of a friend of mine who understands git. Just wait through a few minutes of 'It's really pretty simple, just think of branches as...' and eventually you'll learn the commands that will fix everything." 
-        alt="Git in a nutshell"
-    />
+import Aside from "@/components/Aside.astro"
+
+import SingleCommitSvg from "./single-commit.svg"
+import TwoCommitsSvg from "./two-commits.svg"
+import ThreeCommitsSvg from "./three-commits.svg"
+import NewFixBranchSvg from "./new-fix-branch.svg"
+import NewCommitOnFixSvg from "./new-commit-on-fix.svg"
+import TwoHistoriesSvg from "./two-histories.svg"
+import FastForwardSvg from "./fast-forward.svg"
+import MergeSvg from "./merge.svg"
+import RebaseSvg from "./rebase.svg"
+
+<div className="grid place-items-center">
+  <img
+    src="https://imgs.xkcd.com/comics/git.png"
+    title="If that doesn't fix it, git.txt contains the phone number of a friend of mine who understands git. Just wait through a few minutes of 'It's really pretty simple, just think of branches as...' and eventually you'll learn the commands that will fix everything."
+    alt="Git in a nutshell"
+  />
 </div>
 
-## What is `git`?
+This article serves as an introduction to Git. It starts with a brief history,
+introduces a mental model for how to think about Git, and ends with an exercise
+going over the most common scenarios and how they relate to the mental model.
 
-`git` is a set of tool that lets you build a *distributed version control system*.
+# A Brief History
 
-It makes more sence when read backwards.
-It lets you build a *system*, a way of doing things.
-Its built for *version control*, a way to maintain a history of something, usuall code.
-And its *distributed*, its meant to work accross multiple people / computers.
+## What is Git?
 
-Distributed version control systems have many uses, including viewing old
-snapshots of your content, and tracking change you content concurrently and in
-parallel. Being a sort of database, they can also answer questions about the
-history of your content, like, "who wrote this", "who was the last person to 
-change this line of code, and why", "what did this file look like last week", 
-and more complex things like, "when was this bug introduced", "what changed 
-between these two releases", "when was this exact string added or removed".
+Git is a set of tools for building a _distributed version control system_.
 
+That phrase makes more sense read backwards:
 
-## Why `git`?
+- It is a _system_: a way of doing things.
+- It is for _version control_: keeping a useful history of something, usually
+  code.
+- It is _distributed_: it is designed to work across multiple people and
+  computers.
 
-`git` was created in 2005 by Linus Torvalds because their free license to their
-current distributed version control system, BitKeeper, was revoked. None of the
-existing solutions met the needs of the Linux Kernel, so he wrote his own.
-Since then, the project has been maintained by Junio Hamano.
+It provides the mechanisms, but you decide the patterns and rules for using them.
 
-Today, `git` is popular because its free, fast, and flexible. It supports
-simple single-person projects to the complex workflows at large companies. Much
-of the world's code lives on GitHub, which uses `git` as the version control
-system. GitHub's pull request workflow is the backbone of modern software
-collaboration, so `git` became the defacto default.
+Distributed version control systems let you view old snapshots, work on changes
+in parallel, and answer questions about the history of your content: who wrote
+this, who last changed this line and why, what did this file look like last
+week, when was this bug introduced, what changed between these releases, and
+when was this exact string added or removed?
 
-## How does `git` work?
+## Why Git?
 
-`git`'s core data model is quite simple, made of up of two classes of things: 
-objects and refs. Even though it's simple, its still very useful to understand when learning about the more 
-complex features and workflows that it enables.
+Git was created in 2005 by Linus Torvalds after the Linux kernel project lost
+access to BitKeeper, the distributed version control system it had been using.
+None of the existing solutions met the needs of the Linux kernel, so he wrote
+his own. Since then, the project has been maintained by Junio Hamano.
 
-### `git`'s core data model
+Today, Git is popular because it is free, fast, and flexible. It supports
+simple single-person projects and the complex workflows used by large companies.
+Much of the world's code lives on GitHub, which uses Git as the underlying
+version control system. GitHub's pull request workflow is the backbone of modern
+software collaboration, so Git became the de facto default.
 
-At its core, `git` tracks files and folders. It keeps track of a root folder,
-and everything inside of it. In `git`, files are called *blobs*, and folders are
-called *trees*.
+# Mental Model
+
+To better understand how to use Git and how to speak about its different operations,
+it's very useful to understand how Git works under the hood.
+
+## How does Git work?
+
+Git's core data model is made of two types of things: _objects_ and _refs_.
+Once those are clear, commands like `commit`, `branch`, `merge`, and `rebase`
+become much easier to reason about.
+
+### Git's core data model
+
+At its core, Git tracks files and folders. It stores the contents of a file in a
+_blob_. The blob does not know the file's name. A _tree_ gives blobs their names
+and arranges them into folders. This means two files with the same contents can
+use the same blob. It also means Git does not track empty folders.
+
+TOOD: note .gitkeep or .keep trick
 
 In pseudocode, that might look like
 
 ```typescript
-type blob = list<bytes>
+type Blob = List<Byte>;
 
-type tree = map<string, blob | tree> // name -> file/folder
+type Tree = Map<String, Blob | Tree>; // name -> file/folder
 ```
 
-Lets take a look at an example root tree
+Here is an example root tree that Git could track:
 
 ```
-python_project/   (root tree) 
-├── src/          (tree) 
+python_project/   (root tree)
+├── src/          (tree)
 │   └──  main.py  (blob)
-└── README.md     (blob) 
+└── README.md     (blob)
 ```
 
-`git` tracks history by tracking what I'm going to call *snapshots* of the root
-tree. These snapshots, along with some extra metadata, are the *versions* of
-your content that `git` tracks. It turns out that along side the snapshot of the
-content, its also useful to keep track of who made the snapshot, when it was
-created, a short message about the changes made to it, and which previous
-snapshots this version is based on. Together, this forms a *commit*.
+Git tracks history by taking snapshots of the root tree. Each snapshot becomes
+more useful when it also records who made it, when it was created, a short
+message about why it exists, and which previous snapshots it is based on. That
+whole bundle is called a _commit_.
 
 ```typescript
-type commit = {
-    snapshot: tree;
-    created_at: Date;
-    message: string;
-    author: string;
-    parents: list<commit>;
-}
+type Commit = {
+  snapshot: Tree;
+  createdAt: Datetime;
+  message: String;
+  author: String;
+  parents: List<Commit>;
+};
 ```
 
-All together, blobs, trees, and commits are *objectcs*. Objects in git are 
-identified with a sha1 hash, a fingerprint, of their contents. Git keeps track of
-all these objects in a mapping from object hash to object. These objects are 
-immutable, they cannot change once they are created.
+Blobs, trees, and commits are all _objects_. Objects are identified by a hash of
+their contents. A hash function is a mathematical function with some special
+properties, but conceptually it produces a fingerprint of its input. This is
+useful because we can store and look up objects based on their fingerprint,
+which is usually much smaller than the entire object. By default, Git uses the
+SHA-1 algorithm and displays object IDs as 40-character hexadecimal strings,
+e.g. `2683ad5152dd330f1faabc9911829fb00b803302`.
+
+<Aside title="A note about object IDs">
+A hash is not guaranteed to be mathematically unique, although collisions are
+extraordinarily unlikely in normal use. Git hashes an encoded representation
+containing the object's type, size, and content. Git also supports SHA-256
+repositories, whose object IDs are displayed as 64 hexadecimal characters.
+
+See https://www.youtube.com/watch?v=k0oG_jt6l7Q, shoutout https://boot.dev (not sponsored)
+</Aside>
+
+So really, a commit looks like this
 
 ```typescript
-type object = blob | tree | commit
+type ObjectId = Bytes;
 
-const objects: map<string, object> // object hash -> object
+type Commit = {
+  snapshot: ObjectId;
+  // ...
+  parents: List<ObjectId>;
+};
 ```
 
-These objects can be reffered to by their hashes, but theres another thing in `git`'s data model called a *ref*.
-A ref is a reference or pointer, to an object. 
+but you should still think of a commit as keeping track of the snapshot tree and
+parents.
+
+Git keeps track of all these objects in an *object store*, a database mapping the
+object's hash (fingerprint), to the object itself.
 
 ```typescript
-const refs: map<string, string> // name -> object hash
+type Object = Blob | Tree | Commit;
+
+const objects: Map<ObjectId, Object>; // object hash -> object
 ```
 
-Unlike objects, refs are mutable, meaning you can change what they point to.
+<Aside title="What about tags?">
+Git has a fourth object type, the annotated tag object, which this simplified
+model omits. Tags don't get updated when you commit, so they are useful for
+marking things like specific versions, like `v1.2.3`. TODO: improve, plus git list tag config trick
+</Aside>
 
-*Branches* are refs that point to commits. 
+Objects are immutable: once created, they do not change. If content or history
+changes, Git writes new objects with new hashes.
 
-When a branch points to a commit, we really think of the branch as that commit and all its parents, all their parents, and so on.
+Hashes are useful to Git, but names are easier for people to remember. Git calls
+these names _refs_. A ref points to an object or to another ref. Unlike an
+object, a ref can change what it points to.
+
+```typescript
+type RefName = String;
+type RefTarget = ObjectId | RefName;
+
+const refs: Map<RefName, RefTarget>;
+```
+
+For example, a branch is a ref that points to a commit. `HEAD` is a special ref
+that tells Git which branch you are currently working on. For now, you can think
+of it as pointing to your current branch. We will see both refs in the diagrams
+below.
+
+### Working tree, staging area, and repository
+
+A _repository_ is simply the collection of objects and refs. Git stores this
+in the `.git` folder that marks the root of the repository.
+
+The _working tree_ is the files and folders you can see and edit.
+
+The _staging area_ is the snapshot you are preparing for the next commit.
+
+Most "everyday" commands move information between those places:
+
+- `git add` copies content from the working tree into the staging area.
+- `git commit` turns the staged content into a commit and moves the current
+  branch (ref) to that new commit.
+- `git switch` changes which branch `HEAD` (ref) points at.
+- `git merge` combines work from another branch with the current branch.
+- `git rebase` moves a series of commits to a new starting point.
+
+We will cover these all in more detail in the following example.
+
+## Demo TODO: better heading title here
+
+### A small repository
+
+Let's see this in practice. For this example, we will be prefixing the commit
+messages with letters so the diagrams make sense. You shouldn't do this with
+your real commit messages. See https://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html and https://cbea.ms/git-commit/
+
+<details>
+<summary>Sidequest: Using Git's built-in help</summary>
+
+I will explain a bit about what each command does, but you can get more
+information by adding `--help` at the end of the command, e.g.
+`git status --help`. On many Unix-like systems, this opens a man (manual) page
+in a _pager_, a program that lets you scroll and search through text that does
+not fit on one screen. The exact help viewer and pager depend on your platform
+and configuration. Common controls for the `less` pager are shown below.
+
+Common `less` controls are:
+
+| Key | Action |
+| --- | --- |
+| q | quit |
+| Up/Down, k/j | scroll up and down one line |
+| / | start search  |
+| n | next match  |
+| N | previous match  |
+
+TODO: more
+
+<details>
+<summary>Did you know you can get syntax highlighting in man pages?</summary>
+
+You could use `bat` as your man-page pager.
+TODO: link
+
+```bash
+export MANPAGER='bat --plain --language=man --strip-ansi=always'
+```
+
+</details>
+
+</details>
+
+Start a new repository:
+
+```sh
+mkdir git-101
+cd git-101
+
+git init
+```
+
+`git init` initializes a folder as a Git repository.
 
 
-### Application
+```sh
+git status
+```
+```
+On branch main
 
-Lets see this in practice...
+No commits yet
+
+nothing to commit (create/copy files and use "git add" to track)
+```
+
+`git status` is how you see the current state of Git in the terminal. It reads
+the current Git state and prints relevant information. If you use a Git UI like
+GitHub Desktop or an IDE integration like VS Code's version control pane, this
+information will be displayed to you already.
+
+Create the first commit:
+
+```sh
+touch README.md
+git status --short
+```
+
+```
+?? README.md
+```
+
+`??` means that `README.md` is _untracked_: the file exists, but Git has not
+been told to include it in a snapshot. The following sidequest shows how to find
+that answer using Git's documentation.
+
+<details>
+<summary>Sidequest: Finding out what `??` means</summary>
+
+What does that `??` mean? We can check the help message.
+
+```bash
+git status --help
+```
+
+You could read the whole thing, or we can try to find where the page explains
+it. Make sure you are at the top of the document with `g`. Type
+`/--short<Enter>`. Then go to the next match with `n`.
+
+```text
+       -s, --short
+           Give the output in the short-format.
+```
+
+OK, great, but what's the "short-format"? We can search for it. `/short-format<Enter>`
+
+```text
+       In the short-format, the status of each path is shown as one of these forms
+
+           <xy> <path>
+           <xy> <orig-path> -> <path>
+```
+
+And if you keep reading, you will see a table of what `XY` means. We are looking specifically for `??`.
+
+```
+       ├──────────┼────────┼───────────────────────────────────────┤
+       │          │        │                                       │
+       │    ?     │   ?    │ untracked                             │
+       ├──────────┼────────┼───────────────────────────────────────┤
+```
+
+So it's a file not tracked by Git yet.
+
+Hopefully you now have an idea of how to find a piece of information about Git that you don't know.
+Annoyingly, man pages are often written with a lot of very specific vocabulary,
+which doesn't lend itself to beginners (part of the reason why I'm writing this
+tutorial). Once you get an idea of what all the words mean, they are often easier to
+read through, and a lower barrier than reading the source code directly.
+
+You can of course always use a search engine or your favorite AI chatbot or agent.
+Be warned that unless it can read through the source code, more complex
+questions have a higher chance of being wrong, but for simple things like what does
+`??` mean, they will probably be correct.
+
+"what does ?? mean in git status --short"
+
+Brave Search AI:
+> In the short status format of the git status command, the ?? indicator denotes untracked files. These are files present in your working directory that Git is not yet tracking and have not been added to the staging area.
+
+Google search AI:
+> In `git status --short` (or `git status -s`), `??` means that the file is untracked.
+
+ChatGPT:
+
+> In git status --short, ?? means the file or directory is untracked—it exists in your working directory but hasn’t been added to Git.
+>
+> ?? new-file.txt
+>
+> To begin tracking it:
+>
+> git add new-file.txt
+>
+> Or ignore it by adding its path to .gitignore.
+
+gpt-5.6-sol in OpenCode within the Git repository
 
 
+> ?? means the path is untracked: it exists in the working tree but is unknown to Git’s index.
+>
+> Repository references:
+> - Documentation/git-status.adoc:201-204 defines ?? as untracked and !! as ignored.
+> - wt-status.c:2284-2285 prints "??" for entries in the untracked list.
+>
+> Use git add \<path\> to begin tracking it.
 
-{/*Commits link together to whats mathematically called a *graph*. This isn't
-a plot of $y = x$, its a bunch of points and lines. The points being commits,
-and the lines being relationships between the commits. 
+Hopefully this short side quest gave you the tools to find out anything that
+this article doesn't cover. Back to the tutorial.
+
+</details>
+
+```bash
+git add -A
+git commit -m "A: Add readme"
+```
+
+`git add -A` updates the staging area to reflect additions, modifications, and
+deletions across the working tree. Ignored untracked files are normally
+excluded. `git commit -m "A: Add readme"` creates a new commit, taking a
+snapshot of everything in the staging area with the message "A: Add readme",
+and updates the `main` ref to point at that commit.
+
+```bash
+git status
+```
+```
+On branch main
+nothing to commit, working tree clean
+```
+
+OK, there isn't much information in `git status` because there have been no changes since the last commit.
+We can see information about the history of commits with `git log`.
+
+```bash
+git log
+```
+```
+commit 09da7ce02262aafb80b098b2dc5fbcd265919359 (HEAD -> main)
+Author: Alexander Ott <66271487+AlexanderHott@users.noreply.github.com>
+Date:   Wed Jul 15 14:14:59 2026 -0700
+
+    A: Add readme
+
+```
 
 
-<div className="place-items-center">
-    ![An example graph](./01-graphsvg.svg)
-</div>
+<Aside title="Commit email addresses">
+"Oh no, I just leaked my no-reply email in a public article." Did you know you
+can see anyone's Git email if you look at the raw patch for a commit hosted on
+GitHub? Add `.patch` to the end of the URL to get the raw patch file, e.g.
 
-Its actually a special type of graph called a *directed acyclic graph*. This means that the lines
-connecting the commits have a direction, and there are no cycles, or loops, in
-the graph.
+```
+https://github.com/AlexanderHott/0xott.zip/commit/7dbb9093fd8ad357bc6dbd74317f4c70d039ccd3.patch
+```
+</Aside>
 
-The direction of the arrows mean that "A is a parent of B", and "B is a child of A".
+We can see one commit, `A`. It has the hash `09da7ce02262aafb80b098b2dc5fbcd265919359`, which will probably be different from yours, because you have a different name, email, and creation time. Use your hash and not the one from the article.
 
-<div className="place-items-center">
-    <Image src={notDirected} alt="A non-directed graph" />
-    <Image src={notAcyclic} alt="A cyclic graph" />
-</div> */}
+We can look inside the commit with `git cat-file`. This is a low-level command,
+so you probably won't use it in everyday Git work, but it is useful for seeing
+what Git stores under the hood.
+
+Git lets us shorten an object ID as long as the shortened version identifies
+only one object. This repository is still small, so the first four characters,
+`09da`, are enough.
+
+```bash
+git cat-file -p 09da
+```
+```
+tree f93e3a1a1525fb5b91020da86e44810c87a2d7bc
+author Alexander Ott <66271487+AlexanderHott@users.noreply.github.com> 1784150099 -0700
+committer Alexander Ott <66271487+AlexanderHott@users.noreply.github.com> 1784150099 -0700
+
+A: Add readme
+
+```
+
+We see that it has the tree from the snapshot, the author, committer,
+timestamps, and message.
+
+Let's look at the tree
+
+```bash
+git cat-file -p f93e
+```
+```
+100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	README.md
+```
+
+We see the folder has one entry: the file `README.md`.
+
+If we look at that object, it's empty because the file was empty.
+
+```bash
+git cat-file -p e69d
+```
+```
+```
+
+We can see the single commit `A`, the `main` branch pointing to it, and `HEAD`
+pointing to `main`. Together, these refs tell Git that commit `A` is checked
+out. `HEAD` usually points to a branch, but it can also point directly to a
+commit. We will see that later.
+
+<SingleCommitSvg/>
 
 
+---
+
+Now add an empty source file:
+
+```bash
+mkdir src
+touch src/main.py
+git add -A
+git commit -m "B: Add main.py"
+```
+
+Now `main` points at `B`.
+
+```bash
+git log
+```
+```
+commit e114851b747afa18e3bf5841f37537e82f470bf7 (HEAD -> main)
+Author: Alexander Ott <66271487+AlexanderHott@users.noreply.github.com>
+Date:   Wed Jul 15 14:57:47 2026 -0700
+
+    B: Add main.py
+
+commit 09da7ce02262aafb80b098b2dc5fbcd265919359
+Author: Alexander Ott <66271487+AlexanderHott@users.noreply.github.com>
+Date:   Wed Jul 15 14:14:59 2026 -0700
+
+    A: Add readme
+
+```
+
+<TwoCommitsSvg />
+
+---
+
+Then edit `src/main.py`:
+
+```python
+def main():
+    print("hello world")
+
+main()
+```
+
+Stage and commit that change:
+
+```sh
+git add -A
+git commit -m "C: Add print to main.py"
+```
+
+<ThreeCommitsSvg />
+
+We can get a similar diagram from `git log`.
+
+```bash
+git log --oneline --graph --decorate --all
+```
+```
+* 7610ec3 (HEAD -> main) C: Add print to main.py
+* e114851 B: Add main.py
+* 09da7ce A: Add readme
+```
+
+### Branching
+
+A branch is a movable name that points to a commit. Following that commit's
+parents gives us the branch's history. Here, `main` points to `C`, and the
+history leading to `C` is `C` -> `B` -> `A`.
+
+Creating a branch does not copy the project. It creates another name pointing
+at a commit.
+
+`git switch` is a fairly new subcommand. In older versions of Git, you would use
+the `git checkout` subcommand to switch and create branches, but `checkout` did
+so many other things that Git added `switch` specifically for switching and
+creating branches.
+
+Creating the branch `fix` does two things:
+
+- creates a new ref called `fix`
+- points `fix` at the current commit, `C`
+
+```sh
+git switch -c fix
+```
+
+```bash
+git log --oneline --graph --decorate --all
+```
+```
+* 7610ec3 (HEAD -> fix, main) C: Add print to main.py
+* e114851 B: Add main.py
+* 09da7ce A: Add readme
+```
+
+We can see that we currently have `fix` checked out, and both main and fix are pointing at C.
+
+<NewFixBranchSvg />
+
+Update `src/main.py` so `main()` only runs when the file is executed directly:
+
+```diff
+ def main():
+     print("hello world")
+
+-main()
++if __name__ == "__main__":
++    main()
+```
+
+You can run `git diff` to see the difference between the working tree and the
+staging area. Because we have not staged this edit yet, it appears in the
+output:
+
+```bash
+git diff
+```
+```diff
+diff --git a/src/main.py b/src/main.py
+index 34e1e70..e226863 100644
+--- a/src/main.py
++++ b/src/main.py
+@@ -1,5 +1,6 @@
+ def main():
+     print("hello world")
+
+-main()
++if __name__ == "__main__":
++    main()
+
+```
+
+<details>
+<summary>Sidequest: Better-looking diffs with Delta</summary>
+
+You can change the program that Git uses to display diffs in the terminal. I like
+https://github.com/dandavison/delta
+
+```ansi
+[34mΔ src/main.py[0m
+[34m────────────────────────────────────────────────────────────────────────────────[0m
+
+[34m─────[0m[34m┐[0m
+[34m•[0m [34m1[0m: [34m│[0m
+[34m─────[0m[34m┘[0m
+ [38;2;249;38;114mdef[38;2;248;248;242m [38;2;166;226;46mmain[38;2;248;248;242m():[0m
+ [38;2;248;248;242m    [38;2;102;217;239mprint[38;2;248;248;242m([38;2;230;219;116m"hello world"[38;2;248;248;242m)[0m
+
+[48;2;63;0;1m-main()[0m[48;2;63;0;1m[0K[0m
+[48;2;0;40;0m+[38;2;249;38;114mif[38;2;248;248;242m __name__ [38;2;249;38;114m==[38;2;248;248;242m [38;2;230;219;116m"__main__"[38;2;248;248;242m:[0m[48;2;0;40;0m[0K[0m
+[48;2;0;40;0m+[48;2;0;96;0;38;2;248;248;242m    [48;2;0;40;0mmain()[0m[48;2;0;40;0m[0K[0m
+
+```
+
+</details>
+
+Stage it:
+
+```sh
+git add -A
+```
+
+If you run `git diff` now, you won't see any output. This is because the working
+tree and staging area now match. To see what is staged for the next commit, use
+`git diff --staged`.
+
+| Command | Comparison |
+| --- | --- |
+| `git diff` | working tree vs. staging area |
+| `git diff --staged` | staging area vs. `HEAD` |
+| `git diff HEAD` | working tree vs. `HEAD` |
+
+```
+git commit -m "D: Add import guard"
+```
+
+Now `fix` points at `D`, while `main` still points at `C`. Switch back to `main`
+and make a different commit:
+
+```bash
+git log --oneline --graph --decorate --all
+```
+```
+* f603368 (HEAD -> fix) D: Add import guard
+* 7610ec3 (main) C: Add print to main.py
+* e114851 B: Add main.py
+* 09da7ce A: Add readme
+```
+
+<NewCommitOnFixSvg width="100%"/>
+
+```sh
+git switch main
+```
+
+This updates `HEAD` to point to `main` and changes the files we are working with
+to match commit `C`, where `main` currently points. Git will stop instead if
+switching would overwrite unfinished work.
+
+Update the string inside the print statement:
+
+```diff
+ def main():
+-    print("hello world")
++    print("hello git")
+
+ main()
+```
+
+Stage and commit it:
+
+```bash
+git add -A
+git commit -m "E: Change print"
+```
+
+We see our first interesting diagram, the history has split:
+
+```
+* 53fe1a1 (HEAD -> main) E: Change print
+| * f603368 (fix) D: Add import guard
+|/
+* 7610ec3 C: Add print to main.py
+* e114851 B: Add main.py
+* 09da7ce A: Add readme
+```
+
+<TwoHistoriesSvg width="100%"/>
+
+### Integration
+
+We now have work on two branches that we want to keep: `main` has commit `E`,
+and `fix` has commit `D`. We need to combine them. Git calls this _integrating_
+changes and has two common ways to do it: _merging_ and _rebasing_. We will
+start with merging.
+
+The simplest merge is a _fast-forward_. Imagine that `main` still pointed to
+`C` and only `fix` had moved forward to `D`. Git could update `main` by moving
+its pointer from `C` to `D`. No new commit would be needed.
+
+<FastForwardSvg width="100%"/>
+
+Our branches cannot be fast-forwarded because both names moved after `C`:
+`main` moved to `E`, while `fix` moved to `D`. Git compares the changes from
+`C` to `E` with the changes from `C` to `D` and tries to combine them. If it
+succeeds, it saves the result in a new _merge commit_. The merge commit points
+back to both `E` and `D` as its parents.
+
+In this example, the branches changed different lines, so Git can combine the
+changes automatically. TODO: more on this auto merge
+
+```sh
+git merge fix -m "F: Merge branch 'fix'"
+```
+```
+Auto-merging src/main.py
+Merge made by the 'ort' strategy.
+ src/main.py | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+```
+
+Now we can delete the `fix` branch. This deletes only the name `fix`, not the
+commits. Commit `D` is still part of the history because the new merge commit
+points back to it.
+
+```bash
+git branch -d fix
+```
+
+The merge commit has two parents:
+
+```text
+*   75ae2a3 (HEAD -> main) F: Merge branch 'fix'
+|\
+| * f603368 D: Add import guard
+* | 53fe1a1 E: Change print
+|/
+* 7610ec3 C: Add print to main.py
+* e114851 B: Add main.py
+* 09da7ce A: Add readme
+```
+
+<MergeSvg width="100%"/>
+
+This is why commits form a graph instead of just a list. Most commits have one
+parent. Merge commits have more than one.
+
+We can see this with `git cat-file`.
+
+```bash
+git cat-file -p 75ae2a3
+```
+```
+tree 56f86c7a41e6c4867641bf6911e8c4ea5cf49d2b
+parent 53fe1a138b7b2fa7138929986bd469bea8e0954d
+parent f603368cf6fc9e96d6f11b3c292ed3ad62764bea
+author Alexander Ott <66271487+AlexanderHott@users.noreply.github.com> 1784176656 -0700
+committer Alexander Ott <66271487+AlexanderHott@users.noreply.github.com> 1784176656 -0700
+
+F: Merge branch 'fix'
+```
+
+### Rebasing
+
+Merging combined `main` and `fix` by creating a commit with two parents. In the
+next example, _rebasing_ will combine work differently: it will recreate
+commits from one branch after the latest commit on another branch.
+
+Create a feature branch:
+
+```sh
+git switch -c feature
+```
+
+Start by changing the string in the print statement again:
+
+```diff
+ def main():
+-    print("hello git")
++    print("Hello, git!")
+
+ if __name__ == "__main__":
+     main()
+```
+
+Stage and commit it:
+
+```sh
+git add -A
+git commit -m "G: Make print fancy"
+```
+
+Then add another line:
+
+```diff
+ def main():
+     print("Hello, git!")
++    print("Hello, rebase!")
+
+ if __name__ == "__main__":
+     main()
+```
+
+Stage and commit that too:
+
+```sh
+git add -A
+git commit -m "H: Add more printing"
+```
+
+While that work is happening, `main` can keep moving:
+
+```sh
+git switch main
+```
+
+Change `README.md`:
+
+```markdown
+# Amazing project
+```
+
+Stage and commit it:
+
+```sh
+git add -A
+git commit -m "I: Update readme"
+```
+
+Before rebasing, the graph looks like this:
+
+```text
+* <I> (HEAD -> main) I: Update readme
+| * <H> (feature) H: Add more printing
+| * <G> G: Make print fancy
+|/
+*   <F> F: Merge branch 'fix'
+```
+
+The `feature` branch started at `F` and added `G` and `H`. While that happened,
+`main` added `I`. Rebasing recreates the changes from `G` and `H` after `I`, as
+if the feature work had started from the latest commit on `main`.
+
+<RebaseSvg width="100%" />
+
+Now replay `feature` on top of `main`:
+
+```sh
+git switch feature
+git rebase main
+```
+
+After rebasing, `G` and `H` have been recreated as `G'` and `H'`. Their changes
+are the same, but they have different parents, so they are different commit
+objects with different IDs:
+
+```text
+* <H'> (HEAD -> feature) H: Add more printing
+* <G'> G: Make print fancy
+* <I> (main) I: Update readme
+*   <F> F: Merge branch 'fix'
+```
+
+Now `main` points to `I`, while `feature` points to `H'`. Following the parents
+from `H'` leads through `G'` to `I`, so the history from `main` is already
+included in `feature`. Git can therefore fast-forward `main` by moving its
+pointer from `I` to `H'`:
+
+```sh
+git switch main
+git merge feature --ff-only
+git branch -d feature
+```
+
+Now `main` points at the same commit `feature` pointed at:
+
+```text
+* <H'> (HEAD -> main) H: Add more printing
+* <G'> G: Make print fancy
+* <I> I: Update readme
+*   <F> F: Merge branch 'fix'
+```
+
+### Conflicts
+
+Sometimes two branches change the same part of the same file and Git cannot
+choose the right answer by itself. The last part of `git-101.sh` starts setting
+up that situation:
+
+```sh
+git switch -c hotfix
+```
+
+Add a new first print line:
+
+```diff
+ def main():
++    print("Hello, hotfix!")
+     print("Hello, git!")
+     print("Hello, rebase!")
+
+ if __name__ == "__main__":
+     main()
+```
+
+Stage and commit it:
+
+```sh
+git add -A
+git commit -m "J: Hotfix main"
+```
+
+Back on `main`, add a different first print line in the same place:
+
+```sh
+git switch main
+```
+
+```diff
+ def main():
++    print("Hello, world!")
+     print("Hello, git!")
+     print("Hello, rebase!")
+
+ if __name__ == "__main__":
+     main()
+```
+
+Stage and commit that change:
+
+```sh
+git add -A
+git commit -m "K: Add even more printing"
+```
+
+At this point, `hotfix` and `main` both inserted a different line in the same
+place. If you run `git merge hotfix`, Git will stop and ask you to resolve the
+conflict. This is called a _merge conflict_. That is not Git being broken; it
+is Git refusing to guess.
+
+```sh
+git merge hotfix
+```
+
+```text
+Auto-merging src/main.py
+CONFLICT (content): Merge conflict in src/main.py
+Automatic merge failed; fix conflicts and then commit the result.
+```
+
+Git has not created a merge commit yet. Instead, it has left the repository in
+the middle of the merge so you can decide what the combined content should be.
+`git status --short` marks the file as unmerged:
+
+```sh
+git status --short
+```
+
+```text
+UU src/main.py
+```
+
+Here, `UU` means that both branches modified the file and it still has an
+unresolved conflict. Git writes conflict markers around the part it could not
+combine:
+
+```python
+def main():
+<<<<<<< HEAD
+    print("Hello, world!")
+=======
+    print("Hello, hotfix!")
+>>>>>>> hotfix
+    print("Hello, git!")
+    print("Hello, rebase!")
+
+if __name__ == "__main__":
+    main()
+```
+
+The content between `<<<<<<< HEAD` and `=======` comes from `HEAD`, which is
+our current `main` branch. The content between `=======` and `>>>>>>> hotfix`
+comes from the branch we are merging. Depending on your Git configuration, you
+might also see a section beginning with `|||||||` that shows the common
+ancestor's version.
+
+Resolving a conflict means editing the file into the result you actually want,
+including removing the marker lines. You can choose one side, combine both, or
+write something else entirely. For this example, keep both greetings:
+
+```python
+def main():
+    print("Hello, world!")
+    print("Hello, hotfix!")
+    print("Hello, git!")
+    print("Hello, rebase!")
+
+if __name__ == "__main__":
+    main()
+```
+
+Review the result, then stage the file to tell Git that the conflict is
+resolved:
+
+```sh
+git diff
+git add src/main.py
+git diff --staged
+```
+
+The staged diff shows the combined result that the merge commit will contain:
+
+```diff
+diff --git a/src/main.py b/src/main.py
+index c22f971..a26a73b 100644
+--- a/src/main.py
++++ b/src/main.py
+@@ -1,5 +1,6 @@
+ def main():
+     print("Hello, world!")
++    print("Hello, hotfix!")
+     print("Hello, git!")
+     print("Hello, rebase!")
+```
+
+Finish the merge by creating the merge commit:
+
+```sh
+git commit -m "L: Resolve competing greetings"
+```
+
+```text
+*   <L> (HEAD -> main) L: Resolve competing greetings
+|\
+| * <J> (hotfix) J: Hotfix main
+* | <K> K: Add even more printing
+|/
+* <H'> H': Add more printing
+```
+
+Like commit `F`, commit `L` has two parents. Both lines of development are now
+part of `main`, so the temporary branch name can be deleted:
+
+```sh
+git branch -d hotfix
+```
+
+If you instead want to abandon a conflicted merge and return to the state from
+before `git merge`, run `git merge --abort` before creating the merge commit.
+
+TODO: add an end-of-article command reference / cheat sheet.
 
 ## References
 
-- MIT's The Missing Semester: [https://missing.csail.mit.edu/2026/version-control/](https://missing.csail.mit.edu/2026/version-control/)
-- boot.dev: [https://www.boot.dev/courses/learn-git](https://www.boot.dev/courses/learn-git)
+- MIT's The Missing Semester:
+  [https://missing.csail.mit.edu/2026/version-control/](https://missing.csail.mit.edu/2026/version-control/)
+- boot.dev:
+  [https://www.boot.dev/courses/learn-git](https://www.boot.dev/courses/learn-git)
 - [https://git-scm.com/](https://git-scm.com/)
 - [https://git-scm.com/book/en/v2/Getting-Started-About-Version-Control](https://git-scm.com/book/en/v2/Getting-Started-About-Version-Control)
 - Pro Git: [https://git-scm.com/book/en/v2](https://git-scm.com/book/en/v2)
-- Wikipedia: [https://en.wikipedia.org/wiki/Git](https://en.wikipedia.org/wiki/Git)
+- Wikipedia:
+  [https://en.wikipedia.org/wiki/Git](https://en.wikipedia.org/wiki/Git)
+- Git's tutorial `man gittutorial`
