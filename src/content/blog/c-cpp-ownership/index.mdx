@@ -1,0 +1,385 @@
+---
+createdAt: 2026-08-05T03:02:03.748Z
+title: "Ownership, borrowing, and lifetimes in C and C++"
+tags:
+  - c
+  - cpp
+description:
+  "Learn the concepts of ownership, borrowing, and lifetimes in the context of
+  memory management in C and C++"
+draft: true
+---
+
+Programs create values and acquire resources while they run. Some values only
+need to exist for one function call. Others need to survive until the program
+explicitly decides it is done with them. Memory management is the bookkeeping
+that makes sure each value has somewhere to live and that its resources are
+eventually released.
+
+We will look into lifetimes as they apply to variables and resources.
+The stack is location of memory that the program can allocate fix sized chunks of memory on.
+These regions of memory have a lifetime, often the enclosing scope they are in.
+
+```c
+void process(void) {
+    int data[1024]; // <--| `data`'s lifetime starts here
+                    //    |
+} // <--------------------| `data` is cleaned up when `process` returns, ending its lifetime
+```
+
+Here, the region of memory allocated to `data` is valid for as long as `data` is in scope.
+
+```c
+void process(void) {
+    int data[1024]; // <-------| `data`'s lifetime starts here
+    {                       // |
+        int data2[1024]; // <-----| `data2`'s lifetime starts here
+                            // |  |
+    } // <------------------------| `data2`'s lifetime ends here
+                            // |
+} // <-------------------------| `data`'s lifetime ends here
+```
+
+We see that the region of memory that is allocated to `data` and `data2` matches the lifetime that of the variable that
+holds that memory. When the variable is in scope, the memory is valid to use.
+
+This is true for stack allocated memory, but not guaranteed for dynamically allocated memory.
+
+```c
+void do_something(int *data);
+void process(void) {
+    int *data; // <---------------------------| `data`'s lifetime starts here
+    data = malloc(1024 * sizeof(*data)); // <---| dynamically allocated memory's lifetime starts here.
+                                           // | |
+    free(*data); // <---------------------------| the memory's lifetime ends, but `data` is still in scope
+                                           // |
+    do_something(data);                    // | Here we use the memory that was held by `data` after its lifetime ended (BAD)
+} // <----------------------------------------| `data`'s lifetime ends here
+```
+
+This disconnect is where most bugs happen. Either the memory's lifetime ends too soon, so we end up using the memory
+after we've given it back to the OS, or the variable's lifetime ends so we can't free the memory again.
+
+We can re-write the example so they mostly line up to fix it in this case, but it will get more difficult as our
+function gets more complex.
+
+```c
+void do_something(int *data);
+void process(void) {
+    int *data = malloc(1024 * sizeof(*data)); // <---| `data`'s and memory's lifetime start here
+                                                  // |
+    do_something(data);                           // | `data` and memory still have valid lifetimes
+                                                  // |
+    free(*data); // <--------------------------------| the memory's lifetime ends, and `data` will go out of scope soon
+}
+```
+
+Let's see a more complex example
+
+
+```c
+struct Request { /* ... */ };
+int* get_data() {return malloc(...);}
+Request parse_data(int *data);
+Request process(void) {
+    int *data = get_data(); // <-----------| `data`'s and memory's lifetime start here
+                                        // |
+    Request request = parse_data(data); // |
+                                        // |
+    free(*data); // <----------------------| the memory's lifetime ends, and `data` will go out of scope soon
+
+    return request;
+}
+```
+
+Is this program valid? We can't tell, because we don't know the lifetime of request. If `request` points inside of
+`data`'s memory, then when we free `data`, `request` will be storing invalid (freed) memory. If request copied the data
+it needed into a new allocation, then this is fine as long as request's memory is freed later. In C, your best option is
+to document these things in the contract of the function.
+
+```c
+/// Caller is responsible for freeing returned data with `free`.
+int* get_data();
+/// Return value's lifetime is tied to that of `data`.
+Request parse_data(int *data);
+
+// or
+
+/// Caller is responsible for freeing returned request with `request_free`.
+Request parse_data(int *data);
+```
+
+We'll take a look at a strategy for making working with dynamically allocated memory in C easier, but let's take a look
+at what tools C++ gives us for managing dynamic memory allocations.
+
+## C++
+
+C++ allows the programmer to allocate and free memory dynamically with the `new` and `delete` keywords. These are almost
+identical to `malloc` and `free`.
+
+
+This is commonly called "stack allocation," and is convenient for automatically managing memory. However, stack allocation has some limitations.
+- Memory on the stack must have a fixed size at compile time[^1]
+- Memory on the stack must be able to fit in the available stack space, which is usually 8-16 Mib
+
+Dynamic allocation is useful when a value is too large for
+automatic storage, its size is not known in advance, or it must outlive the
+scope that created it.
+
+You can return data from functions, and most compilers will avoid copying the data (called copy elision). This will let the value on the stack escape to the stack above it.
+
+The rest of this article builds a mental model for dynamic resources around
+three questions:
+
+1. **Ownership:** who is responsible for releasing the resource?
+2. **Borrowing:** who can access the resource without becoming responsible for managing
+   it?
+3. **Lifetime:** for how long is that access valid?
+
+We will begin with manual ownership in C, see how C++ makes ownership executable
+through RAII, and then return to C to group related lifetimes with an arena.
+
+## Ownership in C
+
+Keeping track of memory manually can be difficult, but ownership gives us a
+useful rule: every resource has an _owner_, and the owner is responsible for
+releasing it.
+
+```c
+int main(void) {
+    int *data = malloc(1024 * sizeof(*data)); // <--| the memory's lifetime starts here
+    if (data == NULL) {                       //    |
+        return 1;                             //    |
+    }                                         //    |
+                                              //    |
+    // Use data...                                  |
+                                              //    |
+    free(data); // <--------------------------------| lifetime ends here
+}
+```
+
+Here, we designate `data` as the owner of the allocation. C does not record that
+relationship in the pointer's type; it is a contract established by the program.
+That contract matters as soon as we introduce another pointer.
+
+```c
+int *data = malloc(1024 * sizeof(*data));
+int *data2 = data;
+
+free(data);
+// free(data2); // This would free the same allocation twice.
+```
+
+Copying the pointer did not copy the allocation. Both pointers contain the same
+address, but only one of them can be responsible for calling `free`. In this
+example, `data` remains the owner and `data2` is a non-owning alias.
+
+TODO: diagram about shallow vs deep copy
+
+Function boundaries make this distinction especially important. An API should
+make it clear whether a function only uses an allocation or takes responsibility
+for releasing it. If a function returns some resource, it should make it clear whose job it is to release the resource, and how.
+
+```c
+// Borrows the allocation for the duration of the call.
+void inspect_data(const int *data, size_t length);
+
+// Takes ownership and eventually releases the allocation.
+void consume_data(int *data) {
+    // Use data...
+    free(data);
+}
+
+int main(void) {
+    int *data = malloc(1024 * sizeof(*data));
+    if (data == NULL) {
+        return 1;
+    }
+
+    inspect_data(data, 1024);
+    consume_data(data);
+
+    // `data` no longer points to a live allocation here.
+}
+```
+
+C has no built-in distinction between an owning pointer and a pointer that
+borrows from an owner. Projects communicate the distinction through naming,
+comments, documentation, and conventions. Every return path must still uphold
+the contract, which becomes harder as a program grows.
+
+## Making Ownership Concrete with RAII
+
+C++ has a language feature called _destructors_ which make manage resources less error-prone.
+When you create a class, you can specify a function that will be called when a value goes out of scope.
+
+This can be used to tie the lifetime of a resource to the lifetime of a variable. We can allocate the resource in the
+constructor and deallocate it in the destructor.
+
+```cpp
+// TODO: make this correct
+class Buffer {
+public:
+    explicit Buffer() {
+        this.buffer = new int32_t[1024];
+    }
+    ~Buffer() {
+        delete[] this.buffer;
+    }
+private:
+    int32_t *buffer[1024];
+}
+```
+
+This raises some questions, though. What happens if we do this?
+
+```cpp
+Buffer buf = Buffer();
+{
+    Buffer buf2 = buf;
+}
+```
+
+TODO: factcheck
+When `buf2` goes out of scope, does something get freed? What does `buf2 = buf` mean?
+Unlike C, to keep things consistent, C++ defines `buf2 = buf` as copying, not aliasing.
+
+- `std::string` owns its character storage.
+- `std::vector<T>` owns a dynamically sized sequence of values.
+- `std::unique_ptr<T>` represents exclusive ownership directly.
+
+TODO: Point out that RAII manages resources, not just memory. The same pattern
+can close a file, unlock a mutex, or release a socket.
+
+
+## Copying and Transferring Ownership
+
+Ownership raises a question whenever a value is passed to another part of the
+program: is the resource being duplicated, merely accessed, or transferred?
+These are different operations even when they use similar syntax.
+
+### Copying
+
+TODO: Contrast copying a C pointer with making a deep copy of its allocation.
+Then show that copying a `std::vector` creates an independent vector with its
+own storage and cleanup responsibility.
+
+TODO: Explain why some resources cannot or should not be copied. A
+`std::unique_ptr` is deliberately non-copyable because two exclusive owners
+would contradict its contract.
+
+### Moving
+
+TODO: Introduce a move as a transfer of a C++ value's resources. Show moving a
+`std::vector` or `std::unique_ptr` into a function that takes ownership.
+
+TODO: Explain that `std::move` does not move anything by itself. It changes how
+an expression may be used so that a move constructor or move assignment operator
+can be selected.
+
+TODO: Discuss moved-from values. Standard library objects remain valid but
+usually have an unspecified state, so they may be destroyed or assigned a new
+value but their old contents should not be assumed.
+
+### Lvalues and rvalues
+
+TODO: Keep this section narrow. Explain value categories and rvalue references
+only after the reader understands the ownership operation they enable. Avoid
+making them a prerequisite for understanding the rest of the article.
+
+## Borrowing
+
+Transferring ownership is unnecessary when code only needs temporary access to a
+resource. That temporary, non-owning access is a _borrow_.
+
+TODO: Return to `inspect_data` and introduce a small C slice containing a
+pointer and a length. Make it explicit that the slice does not release its
+buffer.
+
+```c
+struct IntSlice {
+    const int *data;
+    size_t length;
+};
+```
+
+TODO: Show the equivalent C++ tools: references for individual objects,
+`std::span` for contiguous sequences, and `std::string_view` for text.
+
+TODO: Separate immutable borrowing from mutable borrowing. C++'s type system can
+express whether a borrower may mutate a value, but unlike Rust it does not
+generally prove that the borrow remains valid or prevent every conflicting
+alias.
+
+## Lifetimes
+
+A borrow is safe only while the value it refers to is alive. A value's
+_lifetime_ is the portion of program execution during which that value exists
+and may be used.
+
+TODO: Build the section from concrete cases before introducing edge cases:
+
+- An automatic object's lifetime is bounded by its scope.
+- A static object's storage lasts for the program's execution.
+- A dynamically allocated object's lifetime is controlled by the program or by
+  an owning RAII object.
+- A temporary C++ object's lifetime usually ends at the end of its full
+  expression.
+
+TODO: Distinguish an object's lifetime from the duration of the storage it
+occupies. Keep placement `new` and explicit lifetime manipulation as an optional
+aside rather than part of the main explanation.
+
+### The owner must outlive its borrowers
+
+TODO: Demonstrate a dangling C slice by returning a view into a local array,
+then demonstrate a view into a freed allocation. Reuse the same example for a
+dangling `std::span` or `std::string_view` in C++.
+
+TODO: Cover invalidation: a borrow can become invalid before its owner's scope
+ends if the owner reallocates its storage. `std::vector::push_back` and mutation
+of a `std::string` are useful examples.
+
+This is the relationship that ties the three concepts together: the owner
+controls the resource's lifetime, and every borrower must stop using the
+resource before that lifetime ends.
+
+## Grouping Lifetimes with Arenas
+
+Per-object ownership gives precise control, but some objects naturally share a
+lifetime. A parser might create many syntax nodes that all become useless when
+parsing finishes; a game might create temporary data that all becomes useless at
+the end of a frame. An _arena_ makes that relationship explicit by owning a
+larger region from which many smaller allocations are made.
+
+TODO: Implement a minimal arena in C and use a running example to show this
+lifecycle:
+
+1. Initialize the arena.
+2. Allocate several related values from it.
+3. Borrow those values while doing the work.
+4. Reset or destroy the arena once, invalidating every borrow into it.
+
+TODO: Discuss what arenas do and do not solve. They reduce allocation and
+cleanup bookkeeping, but a pointer can still outlive an arena reset. In C++, an
+arena also needs a policy for objects with nontrivial destructors.
+
+## Putting the Model Together
+
+TODO: End by revisiting one example and asking the three questions directly:
+
+1. Who owns this resource and releases it?
+2. Which values merely borrow it?
+3. Does the owner outlive every borrower?
+
+After reading this article, a reader should be able to:
+
+- identify the owner of a dynamically allocated resource;
+- tell whether an API borrows, copies, or takes ownership of a value;
+- explain how RAII connects a C++ object's lifetime to resource cleanup;
+- determine when a pointer, reference, or slice becomes invalid;
+- explain what changes after a C++ value is moved; and
+- recognize when an arena is a good fit for a group of related lifetimes.
+
+
+https://www.dgtlgrove.com/p/untangling-lifetimes-the-arena-allocator
