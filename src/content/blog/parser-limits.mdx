@@ -1,0 +1,288 @@
+---
+createdAt: 2026-09-20T19:18:13.796Z
+title: "Parser Limits"
+tags:
+  - programming-languages
+description: "All software has limits, but most of the time they don't tell you what they are."
+draft: false
+---
+
+I want to calculate the value of $$\sum_{i=0}^{500000} i$$.
+
+So like any other person who isn't Gauss and has access to a _high performance_ language like Rust, I wrote a program to calculate it. The only downside with rust is the compile times, so let actually use a C compiler to get the answer.
+
+```rust
+use std::{
+    fs::OpenOptions,
+    io::{BufWriter, Write},
+};
+
+fn main() {
+    let file = OpenOptions::new()
+        .write(true)
+        .append(false)
+        .create(true)
+        .open("./main.c")
+        .unwrap();
+
+    let mut writer = BufWriter::new(file);
+
+    let count = 500_000;
+
+    writer.write_all(b"#include <stdio.h>\n\n").unwrap();
+    writer.write_all(b"int main(void) {\n").unwrap();
+    for i in 0..=count {
+        writer
+            .write_fmt(format_args!("  long long i{i} = {i};\n"))
+            .unwrap();
+    }
+
+    writer.write_fmt(format_args!("  long long sum = ")).unwrap();
+
+    for i in 0..count {
+        writer.write_fmt(format_args!("  i{i} + \n")).unwrap();
+    }
+    writer
+        .write_fmt(format_args!("  i{};\n\n", count))
+        .unwrap();
+    writer.write_all(b"  printf(\"%ld\\n\", sum);\n").unwrap();
+    writer.write_all(b"}\n").unwrap();
+    writer.flush().unwrap();
+}
+```
+
+Now to compile the program
+
+```bash
+cargo r
+gcc main.c -o main
+```
+
+```txt
+gcc: internal compiler error: Segmentation fault signal terminated program cc1
+Please submit a full bug report, with preprocessed source (by using -freport-bug).
+See <file:///usr/share/doc/gcc-15/README.Bugs> for instructions.
+```
+
+Um..., maybe clang?
+
+```bash
+clang main.c -o main
+```
+
+```
+PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/ and include the crash backtrace, preprocessed source, and associated run script.
+Stack dump:
+0.	Program arguments: /usr/lib/llvm-23/bin/clang -cc1 -triple x86_64-pc-linux-gnu -emit-obj -dumpdir main- -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name main.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu x86-64 -tune-cpu generic -debugger-tuning=gdb -fdebug-compilation-dir=~/Documents/code/sandbox/parser-limit -fcoverage-compilation-dir=~/Documents/code/sandbox/parser-limit -resource-dir /usr/lib/llvm-23/lib/clang/23 -internal-isystem /usr/lib/llvm-23/lib/clang/23/include -internal-isystem /usr/local/include -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/15/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -ferror-limit 19 -fmessage-length=330 -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcolor-diagnostics -faddrsig -fdwarf2-cfi-asm -o /tmp/main-ababf3.o -x c main.c
+1.	main.c:1000003:10: current parser token ';'
+2.	main.c:3:16: parsing function body 'main'
+3.	main.c:3:16: in compound statement ('{}')
+  #0 0x0000718b04ab569f llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) (/usr/lib/llvm-23/bin/../lib/libLLVM.so.23.0+0x50b569f)
+  #1 0x0000718b04ab2fa7 llvm::sys::RunSignalHandlers() (/usr/lib/llvm-23/bin/../lib/libLLVM.so.23.0+0x50b2fa7)
+  #2 0x0000718b04ab650a (/usr/lib/llvm-23/bin/../lib/libLLVM.so.23.0+0x50b650a)
+  #3 0x0000718b04ab6351 (/usr/lib/llvm-23/bin/../lib/libLLVM.so.23.0+0x50b6351)
+  #4 0x0000718aff245cb0 (/usr/lib/x86_64-linux-gnu/libc.so.6+0x45cb0)
+  #5 0x0000718b0ada5188 clang::Stmt::children() (/usr/lib/llvm-23/bin/../lib/libclang-cpp.so.23.0+0x1da5188)
+  #6 0x0000718b0b1a9e08 (/usr/lib/llvm-23/bin/../lib/libclang-cpp.so.23.0+0x21a9e08)
+  #7 0x0000718b0b1a9e7b (/usr/lib/llvm-23/bin/../lib/libclang-cpp.so.23.0+0x21a9e7b)
+  #8 0x0000718b0b1a9e7b (/usr/lib/llvm-23/bin/../lib/libclang-cpp.so.23.0+0x21a9e7b)
+...
+#253 0x0000718b0b1a9e7b (/usr/lib/llvm-23/bin/../lib/libclang-cpp.so.23.0+0x21a9e7b)
+#254 0x0000718b0b1a9e7b (/usr/lib/llvm-23/bin/../lib/libclang-cpp.so.23.0+0x21a9e7b)
+#255 0x0000718b0b1a9e7b (/usr/lib/llvm-23/bin/../lib/libclang-cpp.so.23.0+0x21a9e7b)
+clang: error: unable to execute command: Segmentation fault (core dumped)
+clang: error: clang frontend command failed with exit code -2 (use -v to see invocation)
+Ubuntu clang version 23.0.0 (++20260517083146+46c1fa8d1759-1~exp1~20260517203200.500)
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /usr/lib/llvm-23/bin
+clang: note: diagnostic msg:
+********************
+
+PLEASE ATTACH THE FOLLOWING FILES TO THE BUG REPORT:
+Preprocessed source(s) and associated run script(s) are located at:
+clang: note: diagnostic msg: /tmp/main-f9abe6.c
+clang: note: diagnostic msg: /tmp/main-f9abe6.sh
+clang: note: diagnostic msg:
+
+********************
+Aborted                    (core dumped) clang main.c -o main
+```
+
+Maybe I should have used full stack rust. None of this C nonsense.
+
+```rs
+fn main() {
+    let file = OpenOptions::new()
+        .write(true)
+        .append(false)
+        .create(true)
+        .open("./sum.rs")
+        .unwrap();
+
+    let mut writer = BufWriter::new(file);
+
+    let count = 500_000;
+
+    writer.write_all(b"fn main() {\n").unwrap();
+    for i in 0..=count {
+        writer
+            .write_fmt(format_args!("  let i{i} = {i};\n"))
+            .unwrap();
+    }
+
+    writer.write_fmt(format_args!("  let sum: u64 = ")).unwrap();
+
+    for i in 0..count {
+        writer.write_fmt(format_args!("  i{i} + \n")).unwrap();
+    }
+    writer
+        .write_fmt(format_args!("  i{};\n\n", count ))
+        .unwrap();
+    writer.write_all(b"  println!(\"{sum}\");\n").unwrap();
+    writer.write_all(b"}\n").unwrap();
+    writer.flush().unwrap();
+}
+```
+
+And compile (with checked arithmetic, of course)
+
+```bash
+cargo r
+rustc sum.rs -C overflow-checks=on -o sum
+```
+
+```
+error: rustc interrupted by SIGSEGV, printing backtrace
+
+~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/librustc_driver-8c8aa286d35b6240.so(+0x400e0dc) [0x73bd5b40e0dc]
+/usr/lib/x86_64-linux-gnu/libc.so.6(+0x45cb0) [0x73bd57045cb0]
+~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/librustc_driver-8c8aa286d35b6240.so(_RNvMs3_NtCs4EbYHAaRHyZ_10rustc_lint6levelsINtB5_17LintLevelsBuilderNtB5_7TopDownE4push+0xd9) [0x73bd5d170373]
+~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/librustc_driver-8c8aa286d35b6240.so(+0x5d644eb) [0x73bd5d1644eb]
+
+### cycle encountered after 4 frames with period 5
+~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/librustc_driver-8c8aa286d35b6240.so(+0x5d64b2e) [0x73bd5d164b2e]
+~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/librustc_driver-8c8aa286d35b6240.so(+0x5d64b2e) [0x73bd5d164b2e]
+~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/librustc_driver-8c8aa286d35b6240.so(+0x5d64b2e) [0x73bd5d164b2e]
+~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/librustc_driver-8c8aa286d35b6240.so(+0x5d64b2e) [0x73bd5d164b2e]
+~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/librustc_driver-8c8aa286d35b6240.so(+0x5d64b2e) [0x73bd5d164b2e]
+### recursed 50 times
+
+~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/librustc_driver-8c8aa286d35b6240.so(+0x5d64b2e) [0x73bd5d164b2e]
+~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/librustc_driver-8c8aa286d35b6240.so(+0x5d64b2e) [0x73bd5d164b2e]
+
+note: rustc unexpectedly overflowed its stack! this is a bug
+note: maximum backtrace depth reached, frames may have been lost
+note: we would appreciate a report at https://github.com/rust-lang/rust
+help: you can increase rustc's stack size by setting RUST_MIN_STACK=35651584
+Segmentation fault         (core dumped) rustc sum.rs -o sum
+```
+
+Hm, a stack overflow. I've heard of that website.
+
+[https://stackoverflow.com/questions/65896918/how-gcc-optimize-sum-from-1-to-100-into-5050](https://stackoverflow.com/questions/65896918/how-gcc-optimize-sum-from-1-to-100-into-5050)
+
+This guy seems to have gotten the compiler to output the correct result.
+
+Of course! A loop. Why didn't I think of that.
+
+```rust
+fn main() {
+    let file = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open("./sum.rs")
+        .unwrap();
+
+    let mut writer = BufWriter::new(file);
+
+    let count = 500_001;
+
+    writer.write_all(b"fn main() {\n").unwrap();
+    writer.write_all(b"  let mut sum: u64 = 0;\n").unwrap();
+    writer
+        .write_fmt(format_args!("  for i in 0..={count} {{\n"))
+        .unwrap();
+    writer.write_all(b"    sum += i;\n").unwrap();
+    writer.write_all(b"  }\n").unwrap();
+    writer.write_all(b"  println!(\"{sum}\");\n").unwrap();
+    writer.write_all(b"}\n").unwrap();
+    writer.flush().unwrap();
+}
+```
+
+```bash
+cargo r
+rustc -C opt-level=3 -C overflow-checks=on sum.rs -o sum
+```
+
+Great, that worked! All we need to do now is parse `./sum` to find the constant that `rustc` calculated.
+
+```bash
+objdump --disassemble=main ./sum
+```
+
+```
+0000000000014b30 <main>:
+   14b30:	50                   	push   %rax
+   14b31:	48 89 f1             	mov    %rsi,%rcx
+   14b34:	48 63 d7             	movslq %edi,%rdx
+   14b37:	48 8d 05 62 ff ff ff 	lea    -0x9e(%rip),%rax        # 14aa0 <_RNvCsiKjvRmd1m6m_3sum4main>
+   14b3e:	48 89 04 24          	mov    %rax,(%rsp)
+   14b42:	48 8d 35 ff be 03 00 	lea    0x3beff(%rip),%rsi        # 50a48 <__frame_dummy_init_array_entry+0x8>
+   14b49:	48 89 e7             	mov    %rsp,%rdi
+   14b4c:	45 31 c0             	xor    %r8d,%r8d
+   14b4f:	ff 15 4b dc 03 00    	call   *0x3dc4b(%rip)        # 527a0 <_DYNAMIC+0x248>
+   14b55:	59                   	pop    %rcx
+   14b56:	c3                   	ret
+```
+
+Hm, this actually calls `_RNvCsiKjvRmd1m6m_3sum4main`
+
+
+```bash
+objdump --disassemble=_RNvCsiKjvRmd1m6m_3sum4main ./sum
+```
+
+```
+0000000000014aa0 <_RNvCsiKjvRmd1m6m_3sum4main>:
+   14aa0:	48 83 ec 18          	sub    $0x18,%rsp
+   14aa4:	31 c0                	xor    %eax,%eax
+   14aa6:	31 c9                	xor    %ecx,%ecx
+   14aa8:	0f 1f 84 00 00 00 00 	nopl   0x0(%rax,%rax,1)
+   14aaf:	00
+   14ab0:	48 01 c1             	add    %rax,%rcx
+   14ab3:	72 69                	jb     14b1e <_RNvCsiKjvRmd1m6m_3sum4main+0x7e>
+   14ab5:	48 8d 50 01          	lea    0x1(%rax),%rdx
+   14ab9:	48 01 d1             	add    %rdx,%rcx
+   14abc:	72 60                	jb     14b1e <_RNvCsiKjvRmd1m6m_3sum4main+0x7e>
+   14abe:	48 8d 50 02          	lea    0x2(%rax),%rdx
+   14ac2:	48 01 d1             	add    %rdx,%rcx
+   14ac5:	72 57                	jb     14b1e <_RNvCsiKjvRmd1m6m_3sum4main+0x7e>
+   14ac7:	48 8d 50 03          	lea    0x3(%rax),%rdx
+   14acb:	48 01 d1             	add    %rdx,%rcx
+   14ace:	72 4e                	jb     14b1e <_RNvCsiKjvRmd1m6m_3sum4main+0x7e>
+   14ad0:	48 8d 50 04          	lea    0x4(%rax),%rdx
+   14ad4:	48 01 d1             	add    %rdx,%rcx
+   14ad7:	72 45                	jb     14b1e <_RNvCsiKjvRmd1m6m_3sum4main+0x7e>
+   14ad9:	48 83 c0 05          	add    $0x5,%rax
+   14add:	48 3d 20 a1 07 00    	cmp    $0x7a120,%rax
+   14ae3:	75 cb                	jne    14ab0 <_RNvCsiKjvRmd1m6m_3sum4main+0x10>
+   14ae5:	48 b8 70 d1 90 1a 1d 	movabs $0x1d1a90d170,%rax
+   14aec:	00 00 00
+   14aef:	48 89 04 24          	mov    %rax,(%rsp)
+   14af3:	48 89 e0             	mov    %rsp,%rax
+   14af6:	48 89 44 24 08       	mov    %rax,0x8(%rsp)
+   14afb:	48 8b 05 86 dc 03 00 	mov    0x3dc86(%rip),%rax        # 52788 <_DYNAMIC+0x230>
+   14b02:	48 89 44 24 10       	mov    %rax,0x10(%rsp)
+   14b07:	48 8d 3d d9 03 ff ff 	lea    -0xfc27(%rip),%rdi        # 4ee7 <__abi_tag+0x4beb>
+   14b0e:	48 8d 74 24 08       	lea    0x8(%rsp),%rsi
+   14b13:	ff 15 77 dc 03 00    	call   *0x3dc77(%rip)        # 52790 <_DYNAMIC+0x238>
+   14b19:	48 83 c4 18          	add    $0x18,%rsp
+   14b1d:	c3                   	ret
+   14b1e:	48 8d 3d 53 bf 03 00 	lea    0x3bf53(%rip),%rdi        # 50a78 <__frame_dummy_init_array_entry+0x38>
+   14b25:	ff 15 6d dc 03 00    	call   *0x3dc6d(%rip)        # 52798 <_DYNAMIC+0x240>
+```
+
+There it is, do you see it? `movabs $0x1d1a90d170,%rax` is our an
