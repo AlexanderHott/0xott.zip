@@ -14,6 +14,7 @@ if tmux has-session -t "$SESSION" 2>/dev/null; then
   exec tmux attach-session -t "$SESSION"
 fi
 
+
 # Starting a with a command will exit the session when the command exits. `ls` exits instantly, so the session immediately dies.
 #
 # tmux new-session -d -s "$SESSION" -c "$PWD" "ls"
@@ -21,6 +22,7 @@ fi
 # use tmux send-keys instead
 
 tmux new-session -d -c "$PWD" -s "$SESSION" -n pane1
+
 tmux send-keys -t "$SESSION:pane1" "ls" Enter
 
 # tmux new-window -c "$PWD" -t "$SESSION" -n pane2
@@ -36,12 +38,20 @@ tmux send-keys -t "$SESSION:pane1" "ls" Enter
 # tmux send-keys -t "$SESSION:pane3.1" "echo 'pane3 bottom'" Enter
 
 tmux new-window -c "$PWD" -t "$SESSION" -n pane4
-tmux split-window -dhP -c "$PWD" -t "$SESSION:pane4.0"
-tmux split-window -dhP -c "$PWD" -t "$SESSION:pane4.1"
+tmux split-window -dh -c "$PWD" -t "$SESSION:pane4.0"
+tmux split-window -dh -c "$PWD" -t "$SESSION:pane4.1"
 
 tmux send-keys -t "$SESSION:pane4.0" "echo 'pane4 left'" Enter
 tmux send-keys -t "$SESSION:pane4.1" "echo 'pane4 mid'" Enter
 tmux send-keys -t "$SESSION:pane4.2" "echo 'pane4 right'" Enter
+
+# Hooks run tmux commands, so shell commands need run-shell (-b: don't block tmux).
+# pane-focus-in only fires on pane switches when focus-events (a server option) is on.
+# It's a window hook, so set it on every window once they all exist.
+tmux set-option -s focus-events on
+for window in $(tmux list-windows -t "$SESSION" -F '#{window_id}'); do
+  tmux set-hook -w -t "$window" pane-focus-in "run-shell -b 'aplay -q ~/Downloads/metal-pipe.wav'"
+done
 
 tmux attach-session -t "$SESSION"
 

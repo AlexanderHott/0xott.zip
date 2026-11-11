@@ -1,26 +1,29 @@
 ---
 createdAt: 2026-11-11T06:15:21.666Z
-title: "Tmux"
+title: "Tmux Scripting"
 tags:
   - tmux
-description: "..."
+description: "Learn how to automate actions within tmux."
 draft: true
 ---
 
 `tmux` is a *terminal multiplexer*. Primarily, it lets you run multiple shells from within a single terminal window, and those shells keep running when you disconnect. Here are a few more things it can do.
 
-- keep terminal sessions alive between ssh sessions 
+- keep terminal sessions alive between SSH sessions 
 - detach and reattach later, keeping everything running
 - attach to several sessions from the same client
 - attach several clients to the same session
 - send the same keystrokes to multiple terminals
-- configurable scrollaback history length, and saving scrollback automatically to a file
-- search, select, and copy using vim/emacs keybinds
+- configurable scrollback history length, and saving scrollback automatically to a file
+- search, select, and copy using Vim/Emacs keybinds
 - controllable by scripts
 - hooks for running commands, for example when creating a new window
 
+Let's look how to control it programmatically.
 
 ## Scripting
+
+### Basics
 
 Tmux has a pretty powerful scripting API. The only downside is that you have to use short flags (e.g. `-s`, `-t`) which makes it hard to read at first.
 
@@ -39,68 +42,292 @@ tmux attach-session -t "$SESSION"
 After the setup, we have the `tmux new-session` subcommand. 
 `-d` is for "detached" mode, not immediately connecting you to the tmux session so the rest of the script can run.
 `-c` is to set the "current working directory".
-`-s` is the "source". in this case it's a new session.
+`-s` is the "session name". in this case it's a new session.
 `-n` is the "name" given to the window it creates. Tmux will always start with at least one window.
 
 `tmux attach-session` tells tmux to attach to a session. 
 `-t` is the "target session".
 
----
+### Sending keystrokes
 
 You can run commands in a session by using `send-keys`.
 
+```bash
+tmux send-keys -t "$SESSION:files" "ls" Enter
+```
+
+`-t` is the "target". It tells tmux where to send the keystrokes.
+
+<details>
+<summary><h3>`tmux` Target Reference</h3></summary>
+
+The `-t` flag is the option to set the "target" of many commands in tmux.
+Depending on the command, the target can be a client, session, window, or pane. 
+Each has its own syntax.
+This is how `man tmux` (tmux 3.6, COMMANDS section) describes it:
+
+> Most commands accept the optional `-t` (and sometimes `-s`) argument with one of _target-client_, _target-session_, _target-window_, or _target-pane_. These specify the client, session, window or pane which a command should affect.
+>
+> _target-client_ should be the name of the client, typically the pty(4) file to which the client is connected, for example either of `/dev/ttyp1` or `ttyp1` for the client attached to `/dev/ttyp1`. If no client is specified, tmux attempts to work out the client currently in use; if that fails, an error is reported. Clients may be listed with the `list-clients` command.
+>
+> _target-session_ is tried as, in order:
+>
+> 1. A session ID prefixed with a `$`.
+> 2. An exact name of a session (as listed by the `list-sessions` command).
+> 3. The start of a session name, for example `mysess` would match a session named `mysession`.
+> 4. A glob(7) pattern which is matched against the session name.
+>
+> If the session name is prefixed with an `=`, only an exact match is accepted (so `=mysess` will only match exactly `mysess`, not `mysession`).
+>
+> If a single session is found, it is used as the target session; multiple matches produce an error. If a session is omitted, the current session is used if available; if no current session is available, the most recently used is chosen.
+>
+> _target-window_ (or _src-window_ or _dst-window_) specifies a window in the form _session:window_. _session_ follows the same rules as for _target-session_, and _window_ is looked for in order as:
+>
+> 1. A special token, listed below.
+> 2. A window index, for example `mysession:1` is window 1 in session `mysession`.
+> 3. A window ID, such as `@1`.
+> 4. An exact window name, such as `mysession:mywindow`.
+> 5. The start of a window name, such as `mysession:mywin`.
+> 6. As a glob(7) pattern matched against the window name.
+>
+> Like sessions, a `=` prefix will do an exact match only. An empty window name specifies the next unused index if appropriate (for example the `new-window` and `link-window` commands) otherwise the current window in _session_ is chosen.
+>
+> The following special tokens are available to indicate particular windows. Each has a single-character alternative form.
+>
+> | Token        |     | Meaning                              |
+> | ------------ | --- | ------------------------------------ |
+> | `{start}`    | `^` | The lowest-numbered window           |
+> | `{end}`      | `$` | The highest-numbered window          |
+> | `{last}`     | `!` | The last (previously current) window |
+> | `{next}`     | `+` | The next window by number            |
+> | `{previous}` | `-` | The previous window by number        |
+>
+> _target-pane_ (or _src-pane_ or _dst-pane_) may be a pane ID or takes a similar form to _target-window_ but with the optional addition of a period followed by a pane index or pane ID, for example: `mysession:mywindow.1`. If the pane index is omitted, the currently active pane in the specified window is used. The following special tokens are available for the pane index:
+>
+> | Token            |     | Meaning                                  |
+> | ---------------- | --- | ---------------------------------------- |
+> | `{last}`         | `!` | The last (previously active) pane        |
+> | `{next}`         | `+` | The next pane by number                  |
+> | `{previous}`     | `-` | The previous pane by number              |
+> | `{top}`          |     | The top pane                             |
+> | `{bottom}`       |     | The bottom pane                          |
+> | `{left}`         |     | The leftmost pane                        |
+> | `{right}`        |     | The rightmost pane                       |
+> | `{top-left}`     |     | The top-left pane                        |
+> | `{top-right}`    |     | The top-right pane                       |
+> | `{bottom-left}`  |     | The bottom-left pane                     |
+> | `{bottom-right}` |     | The bottom-right pane                    |
+> | `{up-of}`        |     | The pane above the active pane           |
+> | `{down-of}`      |     | The pane below the active pane           |
+> | `{left-of}`      |     | The pane to the left of the active pane  |
+> | `{right-of}`     |     | The pane to the right of the active pane |
+>
+> The tokens `+` and `-` may be followed by an offset, for example: `select-window -t:+2`.
+>
+> In addition, _target-session_, _target-window_ or _target-pane_ may consist entirely of the token `{mouse}` (alternative form `=`) to specify the session, window or pane where the most recent mouse event occurred (see the "MOUSE SUPPORT" section) or `{marked}` (alternative form `~`) to specify the marked pane (see `select-pane -m`).
+>
+> Sessions, window and panes are each numbered with a unique ID; session IDs are prefixed with a `$`, windows with a `@`, and panes with a `%`. These are unique and are unchanged for the life of the session, window or pane in the tmux server. The pane ID is passed to the child process of the pane in the `TMUX_PANE` environment variable. IDs may be displayed using the `session_id`, `window_id`, or `pane_id` formats (see the "FORMATS" section) and the `display-message`, `list-sessions`, `list-windows` or `list-panes` commands.
+
+Here are some examples:
+
+| target                    | description                     |
+| ---                       | ---                             |
+| `%3`                      | a pane ID on its own            |
+| `session:window.pane`     | the full form                   |
+| `session:window`          | that window's active pane       |
+| `:window.pane`            | a window in the current session |
+| `.pane`                   | a pane in the current window    |
+| ---                       | ---                             |
+| `dev:editor.1`            | the `dev` session, `editor` window, and pane at index 1 |
+
+TODO: a few more examples
+
+</details>
+
+### Splitting windows
+
+You can have multiple panes in a window.
+
+```bash
+tmux new-session -d -c "$PWD" -s "$SESSION" -n files
+tmux send-keys -t "$SESSION:files" "ls" Enter
+
+tmux split-window -dh -c "$PWD" -t "$SESSION:files" 
+tmux send-keys -t "$SESSION:files.1" "ls -la" Enter
+```
+
+`tmux split-window` creates a new pane by splitting the target pane. 
+`-d` keeps tmux focused in the existing pane. This matters when splitting multiple times. 
+`-h` is the "horizontal" split, `-v` (not present) is the "vertical" split.
+`-c` is the current working directory.
+`-t` is the target pane. We named the first window `files`, so we use the `"$SESSION:files"` to target that windows active (and only) pane. 
+
+For `tmux send-keys`, we use the `"$SESSION:files.1"` target, because it was the pane at index 1 in the `files` window.
+
+> Note: It may be less crazy than it seems to use tmux with the 1-indexed setting. Your keyboard keys start at 1 from the left, so mapping the tabs starting at 0 can be awkward.
+
+For a three-way split, you can't just "split a window twice". You need to split a pane once, and then split one of the two panes you just created.
+
+```bash
+tmux new-session -d -c "$PWD" -s "$SESSION" -n files
+tmux send-keys -t "$SESSION:files" "ls" Enter
+
+tmux split-window -dh -c "$PWD" -t "$SESSION:files" 
+tmux send-keys -t "$SESSION:files.1" "ls -la" Enter
+
+tmux split-window -dh -c "$PWD" -t "$SESSION:files.1" 
+tmux send-keys -t "$SESSION:files.2" "pwd" Enter
+```
+
+In the last `split-window`, we target `"$SESSION:files.1"`, so the pane on the right will be split in half. This makes a 50%-25%-25% split. 
+You can control the size of the splits directly with the `-l` option, or tell tmux to rearrange the panes with a pre-defined layout.
+
+For `-l`, you can either specify the number of terminal cells, or the percentage of the available space. For the first split window, if we specified `-l 66%`, we would end up with a roughly even split because the last one would split that 66% in half, resulting in a 33%-33%-33% layout.
+
+Tmux has a few pre-defined layouts that can be set with the `tmux select-layout <layout>` command.
+
+>        even-horizontal
+>                Panes are spread out evenly from left to right across the window.
+> 
+>        even-vertical
+>                Panes are spread evenly from top to bottom.
+> 
+>        main-horizontal
+>                A large (main) pane is shown at the top of the window and the remaining panes are spread from left to right in the leftover space at the bottom.  Use the main-pane-height window option to specify the height of the top pane.
+> 
+>        main-horizontal-mirrored
+>                The same as main-horizontal but mirrored so the main pane is at the bottom of the window.
+> 
+>        main-vertical
+>                A large (main) pane is shown on the left of the window and the remaining panes are spread from top to bottom in the  leftover  space  on  the
+>                right.  Use the main-pane-width window option to specify the width of the left pane.
+> 
+>        main-vertical-mirrored
+>                The same as main-vertical but mirrored so the main pane is on the right of the window.
+> 
+>        tiled   Panes are spread out as evenly as possible over the window in both rows and columns.
+
+### New Windows
+
+If you want another window that you can switch between, you can create one with `tmux new-window`.
+
+
+```bash
+tmux new-window -c "$PWD" -t "$SESSION" -n another-window
+```
+
+### Resuming
+
+Depending on your script, you may want to attach to the session if it already exists instead of creating the panes again.
+You can check if the session exists with `tmux has-session`.
+
+```bash
+if tmux has-session -t "$SESSION" 2>/dev/null; then
+  exec tmux attach-session -t "$SESSION"
+fi
+```
+
+We use `exec` here to replace the Bash script process with the tmux client.
+This prevents the rest of the script from running after you exit the session.
+
+### Close on detach
+
+You may want the tmux session to be destroyed when you detach.
+
+```bash
+tmux set-option detach-on-destroy off
+```
+
+There are many other options and configuration you can set. See OPTIONS section of `man tmux`.
+
+### Options
+
+TODO: when you are allowed to set options
+
+## Examples
+
+### Tmux Sessionizer
+
+Let's say all of your coding projects live in ~/Projects/. Let's write a script that lists all those projects with fzf, and then opens or attaches to a tmux session in that directory with a window for the dev server and one for your editor.
 
 ```bash
 #!/usr/bin/env bash
 
 set -euo pipefail
 
-SESSION=hello-tmux
-
-tmux new-session -d -c "$PWD" -s "$SESSION" -n files
-tmux send-keys -t "$SESSION:files" "ls" Enter
-
-tmux attach-session -t "$SESSION"
+PROJECTS="${PROJECTS:-$HOME/Projects/}"
 ```
 
-`-t` is the "target". It tells tmux what to type the keys in.
+Bash boilerplate.
 
-### Target
+```bash
+dir=$(fd --type d --max-depth 1 . "$PROJECTS" |
+  fzf --delimiter / --with-nth -2 --preview 'ls -A {}') || exit 0
+```
 
-_From the COMMANDS section in `man tmux`._
+Find all the directories in `$PROJECTS`, open `fzf`, and save the directory as `dir`.
 
-Most commands accept the optional -t (and sometimes -s) argument with one  of  target-client, target-session, target-window, or target-pane.  These specify the client, session, window or pane which a command should affect.
+```bash
+name=$(basename "$dir" | tr '.:' '__')
+```
 
-_target-client_ should be the name of the client, typically the pty(4) file to which the client is connected, for example either of /dev/ttyp1 or ttyp1 for the client attached to /dev/ttyp1. If no client is specified, tmux attempts to work out the client currently in use; if that fails, an error is reported. Clients may be listed with the list-clients command.
+Sanitize the directory name.
 
-_target-session_ is tried as, in order:
+```bash
+if tmux has-session -t "=$name" 2>/dev/null; then
+  exec tmux attach-session -t "=$name"
+fi
+```
 
-1. A session ID prefixed with a `$`.
-2. An exact name of a session (as listed by the list-sessions command).
-3. The start of a session name, for example ‘mysess’ would match a session named ‘mysession’.
-4. A glob(7) pattern which is matched against the session name.
+Attach to the session if it already exists.
 
-If the session name is prefixed with an `=`, only an exact match is accepted (so `=mysess` will only match exactly `mysess`, not `mysession`).
+```bash
+tmux new-session -d -c "$dir" -s "$name" -n dev
 
-If a single session is found, it is used as the target session; multiple matches produce an error. If a session is omitted, the current session is used if available; if no current session is available, the most recently used is chosen.
+tmux new-window -c "$dir" -t "=$name" -n editor
+tmux send-keys -t "=$name:editor" "nvim" Enter
+```
 
-_target-window_ (or _src-window_ or _dst-window_) specifies a window in the form _session:window_. _session_ follows the same rules as for _target-session_, and _window_ is looked for in order as:
- 
-1. A special token, listed below.
-2. A window index, for example 'mysession:1' is window 1 in session 'mysession'.
-3. A window ID, such as @1.
-4. An exact window name, such as 'mysession:mywindow'.
-5. The start of a window name, such as 'mysession:mywin'.
-6. As a glob(7) pattern matched against the window name.
- 
-Like sessions, a '=' prefix will do an exact match only. An empty window name specifies the next unused index if appropriate (for example the new-window and link-window commands) otherwise the current window in session is chosen.
+Create a new session with the two windows.
 
-The window tokens are `{start}` `^`, `{end}` `$`, `{last}` `!`, `{next}` `+`, and `{previous}` `-`.
+```bash
+if [[ -n "${TMUX:-}" ]]; then
+  tmux switch-client -t "=$name"
+else
+  tmux attach-session -t "=$name"
+fi
+```
 
-> *target-pane* (or *src-pane* or *dst-pane*) may be a pane ID or takes a similar form to *target-window* but with the optional addition of a period followed by a pane index or pane ID, for example: 'mysession:mywindow.1'. If the pane index is omitted, the currently active pane in the specified window is used.
+If you are already inside a tmux session, switch to it instead.
 
-That's followed by the token table from earlier (`{last}`, `{top}`, `{right-of}`, and so on), and then:
+In full:
 
-> In addition, *target-session*, *target-window* or *target-pane* may consist entirely of the token '{mouse}' (alternative form '=') … or '{marked}' (alternative form '~') to specify the marked pane (see select-pane -m).
+```bash
+#!/usr/bin/env bash
 
-> Sessions, window and panes are each numbered with a unique ID; session IDs are prefixed with a '$', windows with a '@', and panes with a '%'. These are unique and are unchanged for the life of the session, window or pane in the tmux server. The pane ID is passed to the child process of the pane in the TMUX_PANE environment variable.
+set -euo pipefail
+
+PROJECTS="${PROJECTS:-$HOME/Projects/}"
+
+dir=$(fd --type d --max-depth 1 . "$PROJECTS" |
+  fzf --delimiter / --with-nth -2 --preview 'ls -A {}') || exit 0
+
+name=$(basename "$dir" | tr '.:' '__')
+
+if tmux has-session -t "=$name" 2>/dev/null; then
+  exec tmux attach-session -t "=$name"
+fi
+
+tmux new-session -d -c "$dir" -s "$name" -n dev
+
+tmux new-window -c "$dir" -t "=$name" -n editor
+tmux send-keys -t "=$name:editor" "nvim" Enter
+
+if [[ -n "${TMUX:-}" ]]; then
+  tmux switch-client -t "=$name"
+else
+  tmux attach-session -t "=$name"
+fi
+```
+
+You can of course set more options for `fzf`, or configure more search directories. That is left as an exercise for the reader.
