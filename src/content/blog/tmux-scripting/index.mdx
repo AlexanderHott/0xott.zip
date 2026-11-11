@@ -9,7 +9,7 @@ draft: true
 
 `tmux` is a *terminal multiplexer*. Primarily, it lets you run multiple shells from within a single terminal window, and those shells keep running when you disconnect. Here are a few more things it can do.
 
-- keep terminal sessions alive between SSH sessions 
+- keep terminal sessions alive between SSH sessions
 - detach and reattach later, keeping everything running
 - attach to several sessions from the same client
 - attach several clients to the same session
@@ -19,13 +19,13 @@ draft: true
 - controllable by scripts
 - hooks for running commands, for example when creating a new window
 
-Let's look how to control it programmatically.
+Let's look at how to control it programmatically.
 
 ## Scripting
 
 ### Basics
 
-Tmux has a pretty powerful scripting API. The only downside is that you have to use short flags (e.g. `-s`, `-t`) which makes it hard to read at first.
+Tmux has a pretty powerful scripting API. The only downside is that you have to use short flags (e.g. `-s`, `-t`), which makes it hard to read at first.
 
 ```bash
 #!/usr/bin/env bash
@@ -39,13 +39,13 @@ tmux new-session -d -c "$PWD" -s "$SESSION" -n files
 tmux attach-session -t "$SESSION"
 ```
 
-After the setup, we have the `tmux new-session` subcommand. 
+After the setup, we have the `tmux new-session` subcommand.
 `-d` is for "detached" mode, not immediately connecting you to the tmux session so the rest of the script can run.
 `-c` is to set the "current working directory".
-`-s` is the "session name". in this case it's a new session.
+`-s` is the "session name"
 `-n` is the "name" given to the window it creates. Tmux will always start with at least one window.
 
-`tmux attach-session` tells tmux to attach to a session. 
+`tmux attach-session` tells tmux to attach to a session.
 `-t` is the "target session".
 
 ### Sending keystrokes
@@ -62,7 +62,7 @@ tmux send-keys -t "$SESSION:files" "ls" Enter
 <summary><h3>`tmux` Target Reference</h3></summary>
 
 The `-t` flag is the option to set the "target" of many commands in tmux.
-Depending on the command, the target can be a client, session, window, or pane. 
+Depending on the command, the target can be a client, session, window, or pane.
 Each has its own syntax.
 This is how `man tmux` (tmux 3.6, COMMANDS section) describes it:
 
@@ -135,7 +135,7 @@ Here are some examples:
 | `%3`                      | a pane ID on its own            |
 | `session:window.pane`     | the full form                   |
 | `session:window`          | that window's active pane       |
-| `:window.pane`            | a window in the current session |
+| `:window.pane`            | a pane in a window in the current session |
 | `.pane`                   | a pane in the current window    |
 | ---                       | ---                             |
 | `dev:editor.1`            | the `dev` session, `editor` window, and pane at index 1 |
@@ -152,60 +152,49 @@ You can have multiple panes in a window.
 tmux new-session -d -c "$PWD" -s "$SESSION" -n files
 tmux send-keys -t "$SESSION:files" "ls" Enter
 
-tmux split-window -dh -c "$PWD" -t "$SESSION:files" 
+tmux split-window -dh -c "$PWD" -t "$SESSION:files"
 tmux send-keys -t "$SESSION:files.1" "ls -la" Enter
 ```
 
-`tmux split-window` creates a new pane by splitting the target pane. 
-`-d` keeps tmux focused in the existing pane. This matters when splitting multiple times. 
+`tmux split-window` creates a new pane by splitting the target pane.
+`-d` keeps tmux focused in the existing pane. This matters when splitting multiple times.
 `-h` is the "horizontal" split, `-v` (not present) is the "vertical" split.
 `-c` is the current working directory.
-`-t` is the target pane. We named the first window `files`, so we use the `"$SESSION:files"` to target that windows active (and only) pane. 
+`-t` is the target pane. We named the first window `files`, so we use `"$SESSION:files"` to target that window's active (and only) pane.
 
 For `tmux send-keys`, we use the `"$SESSION:files.1"` target, because it was the pane at index 1 in the `files` window.
 
 > Note: It may be less crazy than it seems to use tmux with the 1-indexed setting. Your keyboard keys start at 1 from the left, so mapping the tabs starting at 0 can be awkward.
 
-For a three-way split, you can't just "split a window twice". You need to split a pane once, and then split one of the two panes you just created.
+For a three-way split, you need to split a pane once, and then split one of the two panes you just created.
 
 ```bash
 tmux new-session -d -c "$PWD" -s "$SESSION" -n files
 tmux send-keys -t "$SESSION:files" "ls" Enter
 
-tmux split-window -dh -c "$PWD" -t "$SESSION:files" 
+tmux split-window -dh -c "$PWD" -t "$SESSION:files"
 tmux send-keys -t "$SESSION:files.1" "ls -la" Enter
 
-tmux split-window -dh -c "$PWD" -t "$SESSION:files.1" 
+tmux split-window -dh -c "$PWD" -t "$SESSION:files.1"
 tmux send-keys -t "$SESSION:files.2" "pwd" Enter
 ```
 
-In the last `split-window`, we target `"$SESSION:files.1"`, so the pane on the right will be split in half. This makes a 50%-25%-25% split. 
-You can control the size of the splits directly with the `-l` option, or tell tmux to rearrange the panes with a pre-defined layout.
+In the last `split-window`, we target `"$SESSION:files.1"`, so the pane on the right will be split in half. This makes a 50%-25%-25% split.
+You can control the size of the splits directly with the `-l` option, or tell tmux to rearrange the panes with a predefined layout.
 
 For `-l`, you can either specify the number of terminal cells, or the percentage of the available space. For the first split window, if we specified `-l 66%`, we would end up with a roughly even split because the last one would split that 66% in half, resulting in a 33%-33%-33% layout.
 
-Tmux has a few pre-defined layouts that can be set with the `tmux select-layout <layout>` command.
+Tmux has a few predefined layouts that can be set with the `tmux select-layout <layout>` command.
 
->        even-horizontal
->                Panes are spread out evenly from left to right across the window.
-> 
->        even-vertical
->                Panes are spread evenly from top to bottom.
-> 
->        main-horizontal
->                A large (main) pane is shown at the top of the window and the remaining panes are spread from left to right in the leftover space at the bottom.  Use the main-pane-height window option to specify the height of the top pane.
-> 
->        main-horizontal-mirrored
->                The same as main-horizontal but mirrored so the main pane is at the bottom of the window.
-> 
->        main-vertical
->                A large (main) pane is shown on the left of the window and the remaining panes are spread from top to bottom in the  leftover  space  on  the
->                right.  Use the main-pane-width window option to specify the width of the left pane.
-> 
->        main-vertical-mirrored
->                The same as main-vertical but mirrored so the main pane is on the right of the window.
-> 
->        tiled   Panes are spread out as evenly as possible over the window in both rows and columns.
+> | Layout                     | Description |
+> | -------------------------- | ----------- |
+> | `even-horizontal`          | Panes are spread out evenly from left to right across the window. |
+> | `even-vertical`            | Panes are spread evenly from top to bottom. |
+> | `main-horizontal`          | A large (main) pane is shown at the top of the window and the remaining panes are spread from left to right in the leftover space at the bottom. Use the `main-pane-height` window option to specify the height of the top pane. |
+> | `main-horizontal-mirrored` | The same as `main-horizontal` but mirrored so the main pane is at the bottom of the window. |
+> | `main-vertical`            | A large (main) pane is shown on the left of the window and the remaining panes are spread from top to bottom in the leftover space on the right. Use the `main-pane-width` window option to specify the width of the left pane. |
+> | `main-vertical-mirrored`   | The same as `main-vertical` but mirrored so the main pane is on the right of the window. |
+> | `tiled`                    | Panes are spread out as evenly as possible over the window in both rows and columns. |
 
 ### New Windows
 
@@ -235,10 +224,10 @@ This prevents the rest of the script from running after you exit the session.
 You may want the tmux session to be destroyed when you detach.
 
 ```bash
-tmux set-option detach-on-destroy off
+tmux set-option -t "$SESSION" destroy-unattached on
 ```
 
-There are many other options and configuration you can set. See OPTIONS section of `man tmux`.
+There are many other options and configuration you can set. See the OPTIONS section of `man tmux`.
 
 ### Options
 
@@ -248,7 +237,7 @@ TODO: when you are allowed to set options
 
 ### Tmux Sessionizer
 
-Let's say all of your coding projects live in ~/Projects/. Let's write a script that lists all those projects with fzf, and then opens or attaches to a tmux session in that directory with a window for the dev server and one for your editor.
+Let's say all of your coding projects live in `~/Projects/`. Let's write a script that lists all those projects with fzf, and then opens or attaches to a tmux session in that directory with a window for the dev server and one for your editor.
 
 ```bash
 #!/usr/bin/env bash
@@ -274,8 +263,21 @@ name=$(basename "$dir" | tr '.:' '__')
 Sanitize the directory name.
 
 ```bash
+attach() {
+  if [[ -n "${TMUX:-}" ]]; then
+    exec tmux switch-client -t "=$1"
+  else
+    exec tmux attach-session -t "=$1"
+  fi
+}
+```
+
+tmux won't let you run `attach-session` from inside another tmux session, because that would nest one session inside the other.
+If `$TMUX` is set, the script is already running inside tmux, so we use `switch-client` to move the current client to the session instead.
+
+```bash
 if tmux has-session -t "=$name" 2>/dev/null; then
-  exec tmux attach-session -t "=$name"
+  attach "$name"
 fi
 ```
 
@@ -286,19 +288,11 @@ tmux new-session -d -c "$dir" -s "$name" -n dev
 
 tmux new-window -c "$dir" -t "=$name" -n editor
 tmux send-keys -t "=$name:editor" "nvim" Enter
+
+attach "$name"
 ```
 
-Create a new session with the two windows.
-
-```bash
-if [[ -n "${TMUX:-}" ]]; then
-  tmux switch-client -t "=$name"
-else
-  tmux attach-session -t "=$name"
-fi
-```
-
-If you are already inside a tmux session, switch to it instead.
+Otherwise, create a new session with the two windows and attach to it.
 
 In full:
 
@@ -309,13 +303,21 @@ set -euo pipefail
 
 PROJECTS="${PROJECTS:-$HOME/Projects/}"
 
+attach() {
+  if [[ -n "${TMUX:-}" ]]; then
+    exec tmux switch-client -t "=$1"
+  else
+    exec tmux attach-session -t "=$1"
+  fi
+}
+
 dir=$(fd --type d --max-depth 1 . "$PROJECTS" |
   fzf --delimiter / --with-nth -2 --preview 'ls -A {}') || exit 0
 
 name=$(basename "$dir" | tr '.:' '__')
 
 if tmux has-session -t "=$name" 2>/dev/null; then
-  exec tmux attach-session -t "=$name"
+  attach "$name"
 fi
 
 tmux new-session -d -c "$dir" -s "$name" -n dev
@@ -323,11 +325,7 @@ tmux new-session -d -c "$dir" -s "$name" -n dev
 tmux new-window -c "$dir" -t "=$name" -n editor
 tmux send-keys -t "=$name:editor" "nvim" Enter
 
-if [[ -n "${TMUX:-}" ]]; then
-  tmux switch-client -t "=$name"
-else
-  tmux attach-session -t "=$name"
-fi
+attach "$name"
 ```
 
 You can of course set more options for `fzf`, or configure more search directories. That is left as an exercise for the reader.
