@@ -1,0 +1,106 @@
+---
+createdAt: 2026-11-11T06:15:21.666Z
+title: "Tmux"
+tags:
+  - tmux
+description: "..."
+draft: true
+---
+
+`tmux` is a *terminal multiplexer*. Primarily, it lets you run multiple shells from within a single terminal window, and those shells keep running when you disconnect. Here are a few more things it can do.
+
+- keep terminal sessions alive between ssh sessions 
+- detach and reattach later, keeping everything running
+- attach to several sessions from the same client
+- attach several clients to the same session
+- send the same keystrokes to multiple terminals
+- configurable scrollaback history length, and saving scrollback automatically to a file
+- search, select, and copy using vim/emacs keybinds
+- controllable by scripts
+- hooks for running commands, for example when creating a new window
+
+
+## Scripting
+
+Tmux has a pretty powerful scripting API. The only downside is that you have to use short flags (e.g. `-s`, `-t`) which makes it hard to read at first.
+
+```bash
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SESSION=hello-tmux
+
+tmux new-session -d -c "$PWD" -s "$SESSION" -n files
+
+tmux attach-session -t "$SESSION"
+```
+
+After the setup, we have the `tmux new-session` subcommand. 
+`-d` is for "detached" mode, not immediately connecting you to the tmux session so the rest of the script can run.
+`-c` is to set the "current working directory".
+`-s` is the "source". in this case it's a new session.
+`-n` is the "name" given to the window it creates. Tmux will always start with at least one window.
+
+`tmux attach-session` tells tmux to attach to a session. 
+`-t` is the "target session".
+
+---
+
+You can run commands in a session by using `send-keys`.
+
+
+```bash
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SESSION=hello-tmux
+
+tmux new-session -d -c "$PWD" -s "$SESSION" -n files
+tmux send-keys -t "$SESSION:files" "ls" Enter
+
+tmux attach-session -t "$SESSION"
+```
+
+`-t` is the "target". It tells tmux what to type the keys in.
+
+### Target
+
+_From the COMMANDS section in `man tmux`._
+
+Most commands accept the optional -t (and sometimes -s) argument with one  of  target-client, target-session, target-window, or target-pane.  These specify the client, session, window or pane which a command should affect.
+
+_target-client_ should be the name of the client, typically the pty(4) file to which the client is connected, for example either of /dev/ttyp1 or ttyp1 for the client attached to /dev/ttyp1. If no client is specified, tmux attempts to work out the client currently in use; if that fails, an error is reported. Clients may be listed with the list-clients command.
+
+_target-session_ is tried as, in order:
+
+1. A session ID prefixed with a `$`.
+2. An exact name of a session (as listed by the list-sessions command).
+3. The start of a session name, for example ‘mysess’ would match a session named ‘mysession’.
+4. A glob(7) pattern which is matched against the session name.
+
+If the session name is prefixed with an `=`, only an exact match is accepted (so `=mysess` will only match exactly `mysess`, not `mysession`).
+
+If a single session is found, it is used as the target session; multiple matches produce an error. If a session is omitted, the current session is used if available; if no current session is available, the most recently used is chosen.
+
+_target-window_ (or _src-window_ or _dst-window_) specifies a window in the form _session:window_. _session_ follows the same rules as for _target-session_, and _window_ is looked for in order as:
+ 
+1. A special token, listed below.
+2. A window index, for example 'mysession:1' is window 1 in session 'mysession'.
+3. A window ID, such as @1.
+4. An exact window name, such as 'mysession:mywindow'.
+5. The start of a window name, such as 'mysession:mywin'.
+6. As a glob(7) pattern matched against the window name.
+ 
+Like sessions, a '=' prefix will do an exact match only. An empty window name specifies the next unused index if appropriate (for example the new-window and link-window commands) otherwise the current window in session is chosen.
+
+The window tokens are `{start}` `^`, `{end}` `$`, `{last}` `!`, `{next}` `+`, and `{previous}` `-`.
+
+> *target-pane* (or *src-pane* or *dst-pane*) may be a pane ID or takes a similar form to *target-window* but with the optional addition of a period followed by a pane index or pane ID, for example: 'mysession:mywindow.1'. If the pane index is omitted, the currently active pane in the specified window is used.
+
+That's followed by the token table from earlier (`{last}`, `{top}`, `{right-of}`, and so on), and then:
+
+> In addition, *target-session*, *target-window* or *target-pane* may consist entirely of the token '{mouse}' (alternative form '=') … or '{marked}' (alternative form '~') to specify the marked pane (see select-pane -m).
+
+> Sessions, window and panes are each numbered with a unique ID; session IDs are prefixed with a '$', windows with a '@', and panes with a '%'. These are unique and are unchanged for the life of the session, window or pane in the tmux server. The pane ID is passed to the child process of the pane in the TMUX_PANE environment variable.
