@@ -1,0 +1,87 @@
+---
+createdAt: 2026-11-11T06:15:21.666Z
+title: "Const"
+tags:
+  - const
+  - programming-languages
+description: "..."
+draft: true
+---
+
+I personally don't like function overloading (exactly for this reason), and you usually can't intuitively figure out what the rule is. 
+
+Before we get into how function overloading works for `const`, here's a reminder about the different `const` locations.
+
+```cpp
+// "pointer to int"
+// mutate the pointer: yes
+// mutate the pointed-to value: yes
+int *x;
+
+// "pointer to const int"
+// mutate the pointer: yes
+// mutate the pointed-to value: no
+const int *x;
+int const *x;
+
+// "const pointer to int"
+// mutate the pointer: no
+// mutate the pointed-to value: yes
+int* const x;
+
+// "const pointer to const int"
+// mutate the pointer: no
+// mutate the pointed-to value: no
+const int* const x;
+```
+
+For references, there is only
+
+```cpp
+// "reference to int"
+// mutate the object behind x: yes
+int &x;
+
+// "const reference to int"
+// mutate the object behind x: no
+const int &x;
+int const &x;
+
+// you cannot redirect which object a reference references.
+```
+
+For function overloading, the thing that c++ cares about is the `const` left of the `*` or `&`. (think why that is)
+
+The rough mental model for figuring out which function gets called is
+
+1. the compiler finds all the functions whos parameters can accpet the arguments
+2. rank the conversions for each argument
+3. chooses one if it outperforms others for at least one parameter
+4. otherwise, reports ambiguity if there isn't *one* best option
+
+The main conversions ransk are
+- exact match: `int` -> `int`, `int` -> `int &`
+- promotion: `char` -> `int`, `float` -> `double`
+- "standard" conversions: `int` -> `double`, derived pointer -> base pointer (`Cat *` -> `Animal *`)
+
+`const` mostly falls within "exact match", so there are tie breaking rulse: prefer less qualifications (`int *` over `const int*`).
+
+```cpp
+// can modify the caller's int
+void f(int &x);
+// cannot modify it through x
+void f(const int &x);
+
+int a = 1;
+const int b = 2;
+
+f(a);  // Both work, but int& is preferred: calls f(int &)
+f(b);  // Only const int& works: calls f(const int &)
+f(3);  // Only const int& works, since 3 is a temporary: calls f(const int &)
+
+void g(int *p);
+void g(const int *p);
+
+g(&a);  // Prefers int *: calls g(int *)
+g(&b);  // Only const int * works: calls g(const int *)
+```

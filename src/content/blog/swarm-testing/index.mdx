@@ -1,0 +1,86 @@
+---
+createdAt: 2026-10-13T05:19:51.683Z
+title: "Swarm Testing"
+tags:
+  - testing
+description: "Jarvis, write 1,000,000 tests, no mistakes."
+draft: true
+---
+
+It can be difficult to predict edge cases when writing unit tests.
+This is the main idea behind fuzz testing (also called generative testing or property based testing): write some code that will test properties about the program until it hits an edge case.
+However, one hypothesis about edge-edge cases is that they don't show up when 100 features interact in a shallow way, they show up when 2-3 features interact, a lot, in just the right way.
+
+I first heard about this idea in a Tiger Beetle blog post, but it didn't click for me until matklad described it in a livestream. Then I re-read the blog post and it clicked even more.
+
+Normally, fuzz testing looks something like this:
+
+```rs
+enum Op {
+    Push(u64),
+    Pop,
+}
+
+struct Input {
+    capacity: u8,
+    ops: Vec<Op>,
+}
+
+fuzz_target!(|input: Input| {
+    // Get the random input.
+    let capacity = 1 + usize::from(input.capacity % 16);
+
+    // Construct the data structure you are testing (actual).
+    let queue = Spsc::new(capacity);
+    let (mut producer, mut consumer) = queue.split();
+
+    // Construct the "known good" implementation (expected).
+    let mut model = VecDeque::new();
+
+    // Generate random operations.
+    for op in input.ops.iter().take(10_000) {
+        match *op {
+            Op::Push(value) => {
+                // Apply the operation to the actual data structure.
+                let result = producer.try_push(value);
+
+                // Check that `actual == expected`.
+                if model.len() == capacity {
+                    assert_eq!(result, Err(value));
+                } else {
+                    assert_eq!(result, Ok(()));
+                    model.push_back(value);
+                }
+            }
+
+            Op::Pop => {
+                assert_eq!(consumer.try_pop(), model.pop_front());
+            }
+        }
+    }
+
+    // Check that `actual == expected` after running all the operations.
+    while let Some(expected) = model.pop_front() {
+        assert_eq!(consumer.try_pop(), Some(expected));
+    }
+    assert_eq!(consumer.try_pop(), None);
+});
+```
+
+We have the implementation we are trying to test, and the "known good" implementation that matches the invariants and properties that you are trying to test.
+
+This gets less efficient at finding edge cases when you get more features.
+
+```rs
+enum Op<'m> {
+    Push(u64),
+    Pop,
+    Peek,
+    PushBatch(&'m mut [u64]),
+    PopBatch(u64),
+    PushSplat { count: usize, value: u64 },
+}
+```
+
+The idea behind swarm testing is that you randomize the random testing parameters. 
+Instead of generating a uniform distribution of operations, which could struggle to find bugs where the queue needs to be mostly full, you randomly generate weights for the distributions.
