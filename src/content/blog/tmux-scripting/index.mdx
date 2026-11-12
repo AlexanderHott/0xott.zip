@@ -10,20 +10,13 @@ draft: true
 tmux is a *terminal multiplexer*. 
 Primarily, it lets you run multiple shells from within a single terminal window, and those shells keep running when you disconnect.
 You can reattach later, even from a different SSH connection. 
-It can also:
 
-- attach to several sessions from the same client
-- attach several clients to the same session
-- send the same keystrokes to multiple terminals
-- configurable scrollback history length, and saving scrollback automatically to a file
-- search, select, and copy using vim/emacs keybinds
-- hooks for running commands, for example when creating a new window
-
-Let's look at how to control it programmatically.
+A tmux server holds *sessions*. Each session has one or more *windows* (like tabs), and each window is split into one or more *panes*. 
 
 ## Scripting
 
-A tmux server holds *sessions*. Each session has one or more *windows* (like tabs), and each window is split into one or more *panes*. Most commands act on one of these, chosen with `-t`.
+A tmux script can recreate your terminal workspace: create a session, split windows into panes, and start commands in each pane.
+Let's look at how to control tmux programmatically.
 
 ### Basics
 
@@ -61,91 +54,6 @@ tmux send-keys -t "$SESSION:files" "ls" Enter
 ```
 
 `-t` is the "target". It tells tmux where to send the keystrokes.
-
-<details>
-<summary><h3>tmux Target Reference</h3></summary>
-
-The `-t` flag is the option to set the "target" of many commands in tmux.
-Depending on the command, the target can be a client, session, window, or pane.
-Each has its own syntax.
-This is how `man tmux` (tmux 3.6, COMMANDS section) describes it:
-
-> Most commands accept the optional `-t` (and sometimes `-s`) argument with one of _target-client_, _target-session_, _target-window_, or _target-pane_. These specify the client, session, window or pane which a command should affect.
->
-> _target-client_ should be the name of the client, typically the pty(4) file to which the client is connected, for example either of `/dev/ttyp1` or `ttyp1` for the client attached to `/dev/ttyp1`. If no client is specified, tmux attempts to work out the client currently in use; if that fails, an error is reported. Clients may be listed with the `list-clients` command.
->
-> _target-session_ is tried as, in order:
->
-> 1. A session ID prefixed with a `$`.
-> 2. An exact name of a session (as listed by the `list-sessions` command).
-> 3. The start of a session name, for example `mysess` would match a session named `mysession`.
-> 4. A glob(7) pattern which is matched against the session name.
->
-> If the session name is prefixed with an `=`, only an exact match is accepted (so `=mysess` will only match exactly `mysess`, not `mysession`).
->
-> If a single session is found, it is used as the target session; multiple matches produce an error. If a session is omitted, the current session is used if available; if no current session is available, the most recently used is chosen.
->
-> _target-window_ (or _src-window_ or _dst-window_) specifies a window in the form _session:window_. _session_ follows the same rules as for _target-session_, and _window_ is looked for in order as:
->
-> 1. A special token, listed below.
-> 2. A window index, for example `mysession:1` is window 1 in session `mysession`.
-> 3. A window ID, such as `@1`.
-> 4. An exact window name, such as `mysession:mywindow`.
-> 5. The start of a window name, such as `mysession:mywin`.
-> 6. As a glob(7) pattern matched against the window name.
->
-> Like sessions, a `=` prefix will do an exact match only. An empty window name specifies the next unused index if appropriate (for example the `new-window` and `link-window` commands) otherwise the current window in _session_ is chosen.
->
-> The following special tokens are available to indicate particular windows. Each has a single-character alternative form.
->
-> | Token        |     | Meaning                              |
-> | ------------ | --- | ------------------------------------ |
-> | `{start}`    | `^` | The lowest-numbered window           |
-> | `{end}`      | `$` | The highest-numbered window          |
-> | `{last}`     | `!` | The last (previously current) window |
-> | `{next}`     | `+` | The next window by number            |
-> | `{previous}` | `-` | The previous window by number        |
->
-> _target-pane_ (or _src-pane_ or _dst-pane_) may be a pane ID or takes a similar form to _target-window_ but with the optional addition of a period followed by a pane index or pane ID, for example: `mysession:mywindow.1`. If the pane index is omitted, the currently active pane in the specified window is used. The following special tokens are available for the pane index:
->
-> | Token            |     | Meaning                                  |
-> | ---------------- | --- | ---------------------------------------- |
-> | `{last}`         | `!` | The last (previously active) pane        |
-> | `{next}`         | `+` | The next pane by number                  |
-> | `{previous}`     | `-` | The previous pane by number              |
-> | `{top}`          |     | The top pane                             |
-> | `{bottom}`       |     | The bottom pane                          |
-> | `{left}`         |     | The leftmost pane                        |
-> | `{right}`        |     | The rightmost pane                       |
-> | `{top-left}`     |     | The top-left pane                        |
-> | `{top-right}`    |     | The top-right pane                       |
-> | `{bottom-left}`  |     | The bottom-left pane                     |
-> | `{bottom-right}` |     | The bottom-right pane                    |
-> | `{up-of}`        |     | The pane above the active pane           |
-> | `{down-of}`      |     | The pane below the active pane           |
-> | `{left-of}`      |     | The pane to the left of the active pane  |
-> | `{right-of}`     |     | The pane to the right of the active pane |
->
-> The tokens `+` and `-` may be followed by an offset, for example: `select-window -t:+2`.
->
-> In addition, _target-session_, _target-window_ or _target-pane_ may consist entirely of the token `{mouse}` (alternative form `=`) to specify the session, window or pane where the most recent mouse event occurred (see the "MOUSE SUPPORT" section) or `{marked}` (alternative form `~`) to specify the marked pane (see `select-pane -m`).
->
-> Sessions, window and panes are each numbered with a unique ID; session IDs are prefixed with a `$`, windows with a `@`, and panes with a `%`. These are unique and are unchanged for the life of the session, window or pane in the tmux server. The pane ID is passed to the child process of the pane in the `TMUX_PANE` environment variable. IDs may be displayed using the `session_id`, `window_id`, or `pane_id` formats (see the "FORMATS" section) and the `display-message`, `list-sessions`, `list-windows` or `list-panes` commands.
-
-Here are some examples assuming a session named `dev` with windows `server` and `editor`:
-
-| target               | means                                              |
-| -------------------- | -------------------------------------------------- |
-| `dev`                | the `dev` session                                  |
-| `=dev`               | only a session named exactly `dev` (not `dev-old`) |
-| `dev:editor`         | the active pane of the `editor` window             |
-| `dev:1`              | the window at index 1                              |
-| `dev:{end}`          | the highest-numbered window                        |
-| `dev:editor.1`       | pane index 1 of the `editor` window                |
-| `dev:editor.{right}` | the rightmost pane of the `editor` window          |
-| `%3`                 | the pane with ID 3, wherever it is                 |
-
-</details>
 
 ### Splitting windows
 
@@ -251,16 +159,16 @@ set -euo pipefail
 PROJECTS="${PROJECTS:-$HOME/Projects/}"
 ```
 
-Bash boilerplate.
+`PROJECTS` defaults to `~/Projects/`. Set the `PROJECTS` environment variable to change that.
 
 ```bash
 dir=$(fd --type d --max-depth 1 . "$PROJECTS" |
   fzf --delimiter / --with-nth -2 --preview 'ls -A {}') || exit 0
 ```
 
-Find all the directories in `$PROJECTS`, open `fzf`, and save the directory as `dir`.
-
-This needs `fd` and `fzf` installed. `fd` prints paths like `/home/you/Projects/blog/`. Splitting on `/` and showing field `-2` makes fzf display just `blog` while still returning the full path. If you press Esc, fzf exits with an error, and `|| exit 0` quits quietly instead.
+`fd` lists the directories directly inside `$PROJECTS`, and `fzf` lets you choose one. 
+The picker displays each directory's name but returns its full path, which we save in `dir`.
+If you cancel the picker, `|| exit 0` exits the script
 
 ```bash
 name=$(basename "$dir" | tr '.:' '__')
@@ -287,9 +195,8 @@ if tmux has-session -t "=$name" 2>/dev/null; then
 fi
 ```
 
-Attach to the session if it already exists.
-
-The `=` prefix forces an exact match. Without it, if there's no `blog` session but there is a `blog-old` one, `has-session -t blog` would match `blog-old` by prefix and attach you to the wrong project.
+Check for an existing session before creating one.
+The `=` prefix requires an exact match, so choosing `blog` won't attach you to `blog-old`.
 
 ```bash
 tmux new-session -d -c "$dir" -s "$name" -n dev
@@ -337,3 +244,90 @@ attach "$name"
 ```
 
 You can of course set more options for `fzf`, or configure more search directories. That is left as an exercise for the reader.
+
+
+<details>
+<summary><h3>tmux Target Reference</h3></summary>
+
+The `-t` flag is the option to set the "target" of many commands in tmux.
+Depending on the command, the target can be a client, session, window, or pane.
+Each has its own syntax.
+This is how `man tmux` (tmux 3.6, COMMANDS section) describes it:
+
+> Most commands accept the optional `-t` (and sometimes `-s`) argument with one of _target-client_, _target-session_, _target-window_, or _target-pane_. These specify the client, session, window or pane which a command should affect.
+>
+> _target-client_ should be the name of the client, typically the pty(4) file to which the client is connected, for example either of `/dev/ttyp1` or `ttyp1` for the client attached to `/dev/ttyp1`. If no client is specified, tmux attempts to work out the client currently in use; if that fails, an error is reported. Clients may be listed with the `list-clients` command.
+>
+> _target-session_ is tried as, in order:
+>
+> 1. A session ID prefixed with a `$`.
+> 2. An exact name of a session (as listed by the `list-sessions` command).
+> 3. The start of a session name, for example `mysess` would match a session named `mysession`.
+> 4. A glob(7) pattern which is matched against the session name.
+>
+> If the session name is prefixed with an `=`, only an exact match is accepted (so `=mysess` will only match exactly `mysess`, not `mysession`).
+>
+> If a single session is found, it is used as the target session; multiple matches produce an error. If a session is omitted, the current session is used if available; if no current session is available, the most recently used is chosen.
+>
+> _target-window_ (or _src-window_ or _dst-window_) specifies a window in the form _session:window_. _session_ follows the same rules as for _target-session_, and _window_ is looked for in order as:
+>
+> 1. A special token, listed below.
+> 2. A window index, for example `mysession:1` is window 1 in session `mysession`.
+> 3. A window ID, such as `@1`.
+> 4. An exact window name, such as `mysession:mywindow`.
+> 5. The start of a window name, such as `mysession:mywin`.
+> 6. As a glob(7) pattern matched against the window name.
+>
+> Like sessions, a `=` prefix will do an exact match only. An empty window name specifies the next unused index if appropriate (for example the `new-window` and `link-window` commands) otherwise the current window in _session_ is chosen.
+>
+> The following special tokens are available to indicate particular windows. Each has a single-character alternative form.
+>
+> | Token        |     | Meaning                              |
+> | ------------ | --- | ------------------------------------ |
+> | `{start}`    | `^` | The lowest-numbered window           |
+> | `{end}`      | `$` | The highest-numbered window          |
+> | `{last}`     | `!` | The last (previously current) window |
+> | `{next}`     | `+` | The next window by number            |
+> | `{previous}` | `-` | The previous window by number        |
+>
+> _target-pane_ (or _src-pane_ or _dst-pane_) may be a pane ID or takes a similar form to _target-window_ but with the optional addition of a period followed by a pane index or pane ID, for example: `mysession:mywindow.1`. If the pane index is omitted, the currently active pane in the specified window is used. The following special tokens are available for the pane index:
+>
+> | Token            |     | Meaning                                  |
+> | ---------------- | --- | ---------------------------------------- |
+> | `{last}`         | `!` | The last (previously active) pane        |
+> | `{next}`         | `+` | The next pane by number                  |
+> | `{previous}`     | `-` | The previous pane by number              |
+> | `{top}`          |     | The top pane                             |
+> | `{bottom}`       |     | The bottom pane                          |
+> | `{left}`         |     | The leftmost pane                        |
+> | `{right}`        |     | The rightmost pane                       |
+> | `{top-left}`     |     | The top-left pane                        |
+> | `{top-right}`    |     | The top-right pane                       |
+> | `{bottom-left}`  |     | The bottom-left pane                     |
+> | `{bottom-right}` |     | The bottom-right pane                    |
+> | `{up-of}`        |     | The pane above the active pane           |
+> | `{down-of}`      |     | The pane below the active pane           |
+> | `{left-of}`      |     | The pane to the left of the active pane  |
+> | `{right-of}`     |     | The pane to the right of the active pane |
+>
+> The tokens `+` and `-` may be followed by an offset, for example: `select-window -t:+2`.
+>
+> In addition, _target-session_, _target-window_ or _target-pane_ may consist entirely of the token `{mouse}` (alternative form `=`) to specify the session, window or pane where the most recent mouse event occurred (see the "MOUSE SUPPORT" section) or `{marked}` (alternative form `~`) to specify the marked pane (see `select-pane -m`).
+>
+> Sessions, window and panes are each numbered with a unique ID; session IDs are prefixed with a `$`, windows with a `@`, and panes with a `%`. These are unique and are unchanged for the life of the session, window or pane in the tmux server. The pane ID is passed to the child process of the pane in the `TMUX_PANE` environment variable. IDs may be displayed using the `session_id`, `window_id`, or `pane_id` formats (see the "FORMATS" section) and the `display-message`, `list-sessions`, `list-windows` or `list-panes` commands.
+
+Here are some examples assuming a session named `dev` with windows `server` and `editor`:
+
+| target               | means                                              |
+| -------------------- | -------------------------------------------------- |
+| `dev`                | the `dev` session                                  |
+| `=dev`               | only a session named exactly `dev` (not `dev-old`) |
+| `dev:editor`         | the active pane of the `editor` window             |
+| `dev:1`              | the window at index 1                              |
+| `dev:{end}`          | the highest-numbered window                        |
+| `dev:editor.1`       | pane index 1 of the `editor` window                |
+| `dev:editor.{right}` | the rightmost pane of the `editor` window          |
+| `%3`                 | the pane with ID 3, wherever it is                 |
+
+</details>
+
