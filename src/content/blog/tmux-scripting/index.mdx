@@ -1,31 +1,30 @@
 ---
 createdAt: 2026-11-11T06:15:21.666Z
-title: "Tmux Scripting"
+title: "tmux Scripting"
 tags:
   - tmux
 description: "Learn how to automate actions within tmux."
 draft: true
 ---
 
-`tmux` is a *terminal multiplexer*. Primarily, it lets you run multiple shells from within a single terminal window, and those shells keep running when you disconnect. Here are a few more things it can do.
+tmux is a *terminal multiplexer*. Primarily, it lets you run multiple shells from within a single terminal window, and those shells keep running when you disconnect, so you can reattach later, even from a different SSH connection. It can also:
 
-- keep terminal sessions alive between SSH sessions
-- detach and reattach later, keeping everything running
 - attach to several sessions from the same client
 - attach several clients to the same session
 - send the same keystrokes to multiple terminals
 - configurable scrollback history length, and saving scrollback automatically to a file
 - search, select, and copy using Vim/Emacs keybinds
-- controllable by scripts
 - hooks for running commands, for example when creating a new window
 
 Let's look at how to control it programmatically.
 
 ## Scripting
 
+A tmux server holds *sessions*. Each session has one or more *windows* (like tabs), and each window is split into one or more *panes*. Most commands act on one of these, chosen with `-t`.
+
 ### Basics
 
-Tmux has a pretty powerful scripting API. The only downside is that you have to use short flags (e.g. `-s`, `-t`), which makes it hard to read at first.
+tmux has a pretty powerful scripting API. The only downside is that you have to use short flags (e.g. `-s`, `-t`), which makes it hard to read at first.
 
 ```bash
 #!/usr/bin/env bash
@@ -39,14 +38,16 @@ tmux new-session -d -c "$PWD" -s "$SESSION" -n files
 tmux attach-session -t "$SESSION"
 ```
 
-After the setup, we have the `tmux new-session` subcommand.
-`-d` is for "detached" mode, not immediately connecting you to the tmux session so the rest of the script can run.
-`-c` is to set the "current working directory".
-`-s` is the "session name"
-`-n` is the "name" given to the window it creates. Tmux will always start with at least one window.
+`tmux new-session` creates a session:
 
-`tmux attach-session` tells tmux to attach to a session.
-`-t` is the "target session".
+- `-d`: create it without attaching, so the rest of the script keeps running.
+- `-c "$PWD"`: the directory the session starts in.
+- `-s "$SESSION"`: the session name.
+- `-n files`: the name of the first window. Every new session starts with one window.
+
+`tmux attach-session` attaches your terminal to a session:
+
+- `-t "$SESSION"`: the session to attach to.
 
 ### Sending keystrokes
 
@@ -59,7 +60,7 @@ tmux send-keys -t "$SESSION:files" "ls" Enter
 `-t` is the "target". It tells tmux where to send the keystrokes.
 
 <details>
-<summary><h3>`tmux` Target Reference</h3></summary>
+<summary><h3>tmux Target Reference</h3></summary>
 
 The `-t` flag is the option to set the "target" of many commands in tmux.
 Depending on the command, the target can be a client, session, window, or pane.
@@ -128,19 +129,18 @@ This is how `man tmux` (tmux 3.6, COMMANDS section) describes it:
 >
 > Sessions, window and panes are each numbered with a unique ID; session IDs are prefixed with a `$`, windows with a `@`, and panes with a `%`. These are unique and are unchanged for the life of the session, window or pane in the tmux server. The pane ID is passed to the child process of the pane in the `TMUX_PANE` environment variable. IDs may be displayed using the `session_id`, `window_id`, or `pane_id` formats (see the "FORMATS" section) and the `display-message`, `list-sessions`, `list-windows` or `list-panes` commands.
 
-Here are some examples:
+Here are some examples assuming a session named `dev` with windows `server` and `editor`:
 
-| target                    | description                     |
-| ---                       | ---                             |
-| `%3`                      | a pane ID on its own            |
-| `session:window.pane`     | the full form                   |
-| `session:window`          | that window's active pane       |
-| `:window.pane`            | a pane in a window in the current session |
-| `.pane`                   | a pane in the current window    |
-| ---                       | ---                             |
-| `dev:editor.1`            | the `dev` session, `editor` window, and pane at index 1 |
-
-TODO: a few more examples
+| target               | means                                              |
+| -------------------- | -------------------------------------------------- |
+| `dev`                | the `dev` session                                  |
+| `=dev`               | only a session named exactly `dev` (not `dev-old`) |
+| `dev:editor`         | the active pane of the `editor` window             |
+| `dev:1`              | the window at index 1                              |
+| `dev:{end}`          | the highest-numbered window                        |
+| `dev:editor.1`       | pane index 1 of the `editor` window                |
+| `dev:editor.{right}` | the rightmost pane of the `editor` window          |
+| `%3`                 | the pane with ID 3, wherever it is                 |
 
 </details>
 
@@ -156,15 +156,17 @@ tmux split-window -dh -c "$PWD" -t "$SESSION:files"
 tmux send-keys -t "$SESSION:files.1" "ls -la" Enter
 ```
 
-`tmux split-window` creates a new pane by splitting the target pane.
-`-d` keeps tmux focused in the existing pane. This matters when splitting multiple times.
-`-h` is the "horizontal" split, `-v` (not present) is the "vertical" split.
-`-c` is the current working directory.
-`-t` is the target pane. We named the first window `files`, so we use `"$SESSION:files"` to target that window's active (and only) pane.
+`tmux split-window` creates a new pane by splitting the target pane:
 
-For `tmux send-keys`, we use the `"$SESSION:files.1"` target, because it was the pane at index 1 in the `files` window.
+- `-d`: don't switch to the new pane. The original pane stays active, which matters because targeting a window means targeting its active pane. Without `-d`, a second split of `"$SESSION:files"` would split the new pane instead.
+- `-h`: put the new pane to the right, side by side. Without it, tmux uses `-v` and puts the new pane below.
+- `-c "$PWD"`: the directory the new pane starts in.
+- `-t "$SESSION:files"`: the pane to split. We named the first window `files`, so this targets that window's active (and only) pane.
+- `-b`: split the new window before the active pane, so above or to the left.
 
-> Note: It may be less crazy than it seems to use tmux with the 1-indexed setting. Your keyboard keys start at 1 from the left, so mapping the tabs starting at 0 can be awkward.
+For `tmux send-keys`, we use the `"$SESSION:files.1"` target, because the new pane is at index 1 in the `files` window.
+
+> Note: window and pane numbers start at 0 by default. Many people set `base-index 1` and `pane-base-index 1` so window numbers match the number row on the keyboard. If you do, the `.1` and `.2` targets in these examples point at different panes. Shift them up by one, or use tokens like `{right}`.
 
 For a three-way split, you need to split a pane once, and then split one of the two panes you just created.
 
@@ -184,7 +186,7 @@ You can control the size of the splits directly with the `-l` option, or tell tm
 
 For `-l`, you can either specify the number of terminal cells, or the percentage of the available space. For the first split window, if we specified `-l 66%`, we would end up with a roughly even split because the last one would split that 66% in half, resulting in a 33%-33%-33% layout.
 
-Tmux has a few predefined layouts that can be set with the `tmux select-layout <layout>` command.
+tmux has a few predefined layouts that can be set with `tmux select-layout -t "$SESSION:files" <layout>`.
 
 > | Layout                     | Description |
 > | -------------------------- | ----------- |
@@ -198,7 +200,7 @@ Tmux has a few predefined layouts that can be set with the `tmux select-layout <
 
 ### New Windows
 
-If you want another window that you can switch between, you can create one with `tmux new-window`.
+If you want another window to switch to, create one with `tmux new-window`.
 
 
 ```bash
@@ -217,7 +219,7 @@ fi
 ```
 
 We use `exec` here to replace the Bash script process with the tmux client.
-This prevents the rest of the script from running after you exit the session.
+This prevents the rest of the script from running after you detach.
 
 ### Close on detach
 
@@ -235,9 +237,9 @@ TODO: when you are allowed to set options
 
 ## Examples
 
-### Tmux Sessionizer
+### tmux sessionizer
 
-Let's say all of your coding projects live in `~/Projects/`. Let's write a script that lists all those projects with fzf, and then opens or attaches to a tmux session in that directory with a window for the dev server and one for your editor.
+Let's say all of your coding projects live in `~/Projects/`. Let's write a script that lists all those projects with fzf, and then opens or attaches to a tmux session in that directory with a window for running your dev server and one for your editor.
 
 ```bash
 #!/usr/bin/env bash
@@ -256,11 +258,13 @@ dir=$(fd --type d --max-depth 1 . "$PROJECTS" |
 
 Find all the directories in `$PROJECTS`, open `fzf`, and save the directory as `dir`.
 
+This needs `fd` and `fzf` installed. `fd` prints paths like `/home/you/Projects/blog/`. Splitting on `/` and showing field `-2` makes fzf display just `blog` while still returning the full path. If you press Esc, fzf exits with an error, and `|| exit 0` quits quietly instead.
+
 ```bash
 name=$(basename "$dir" | tr '.:' '__')
 ```
 
-Sanitize the directory name.
+tmux uses `.` and `:` as separators in targets (`session:window.pane`), so a project called `my.app` would break every target that uses its name. Replace both with `_`.
 
 ```bash
 attach() {
@@ -282,6 +286,8 @@ fi
 ```
 
 Attach to the session if it already exists.
+
+The `=` prefix forces an exact match. Without it, if there's no `blog` session but there is a `blog-old` one, `has-session -t blog` would match `blog-old` by prefix and attach you to the wrong project.
 
 ```bash
 tmux new-session -d -c "$dir" -s "$name" -n dev
