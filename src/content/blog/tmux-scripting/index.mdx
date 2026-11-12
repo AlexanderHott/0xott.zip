@@ -7,13 +7,16 @@ description: "Learn how to automate actions within tmux."
 draft: true
 ---
 
-tmux is a *terminal multiplexer*. Primarily, it lets you run multiple shells from within a single terminal window, and those shells keep running when you disconnect, so you can reattach later, even from a different SSH connection. It can also:
+tmux is a *terminal multiplexer*. 
+Primarily, it lets you run multiple shells from within a single terminal window, and those shells keep running when you disconnect.
+You can reattach later, even from a different SSH connection. 
+It can also:
 
 - attach to several sessions from the same client
 - attach several clients to the same session
 - send the same keystrokes to multiple terminals
 - configurable scrollback history length, and saving scrollback automatically to a file
-- search, select, and copy using Vim/Emacs keybinds
+- search, select, and copy using vim/emacs keybinds
 - hooks for running commands, for example when creating a new window
 
 Let's look at how to control it programmatically.
@@ -24,7 +27,7 @@ A tmux server holds *sessions*. Each session has one or more *windows* (like tab
 
 ### Basics
 
-tmux has a pretty powerful scripting API. The only downside is that you have to use short flags (e.g. `-s`, `-t`), which makes it hard to read at first.
+tmux has a powerful scripting API. The only downside is that you have to use short flags (e.g. `-s`, `-t`), which can make it harder to read.
 
 ```bash
 #!/usr/bin/env bash
@@ -221,7 +224,10 @@ fi
 We use `exec` here to replace the Bash script process with the tmux client.
 This prevents the rest of the script from running after you detach.
 
-### Close on detach
+### Options
+
+tmux has configuration options that change how it behaves.
+Some of these are useful in scripts.
 
 You may want the tmux session to be destroyed when you detach.
 
@@ -230,10 +236,6 @@ tmux set-option -t "$SESSION" destroy-unattached on
 ```
 
 There are many other options and configuration you can set. See the OPTIONS section of `man tmux`.
-
-### Options
-
-TODO: when you are allowed to set options
 
 ## Examples
 
